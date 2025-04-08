@@ -2,16 +2,15 @@
 using MongoDB.Driver;
 using DotNetEnv;
 
+Env.Load();
+
 var mongouser = Environment.GetEnvironmentVariable("MONGO_INITDB_ROOT_USERNAME");
 var mongopass = Environment.GetEnvironmentVariable("MONGO_INITDB_ROOT_PASSWORD");
 var port = 27017;
 
-var client = new MongoClient($"mongodb://{mongouser}:{mongopass}@mongo:{port}");
+var client = new MongoClient($"mongodb://{mongouser}:{mongopass}@localhost:{port}");
 var database = client.GetDatabase("admin");
 var collection = database.GetCollection<BsonDocument>("system.users");
-
-
-
 
 await collection.InsertOneAsync(new BsonDocument("Name", "Jack"));
 
