@@ -1,6 +1,12 @@
-version: '3.8'
-
 services:
+  mongo:
+    image: mongo
+    restart: always
+    ports:
+      - 27017:27017
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
   postgres:
     image: postgres:15
     container_name: postgres_yelp
@@ -11,6 +17,5 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     restart: always
-
 volumes:
   pgdata:
