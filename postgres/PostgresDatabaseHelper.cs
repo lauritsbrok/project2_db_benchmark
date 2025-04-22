@@ -2,11 +2,19 @@ using System;
 using Npgsql;
 using DotNetEnv;
 using System.Text;
+using System.Text.Json;
+using project2_db_benchmark.postgres.Models;
 
 namespace project2_db_benchmark.postgres;
 
 public class PostgresDatabaseHelper
 {
+    public PostgresDatabaseHelper()
+    {
+        // Don't automatically setup indexes in the constructor
+        // We'll call this explicitly after tables are created
+    }
+
     public async Task InsertJsonFromFileInChunksAsync(string filePath, int chunkSize = 1000, string tableType = "tip")
     {
         // Load the .env file
@@ -18,7 +26,7 @@ public class PostgresDatabaseHelper
         string? dbDatabase = Environment.GetEnvironmentVariable("POSTGRES_DB");
 
         // Construct the connection string
-        var connectionString = $"Host=localhost;Username={dbUsername};Password={dbPassword};Database={dbDatabase}";
+        var connectionString = $"Host=localhost;Port=5433;Username={dbUsername};Password={dbPassword};Database={dbDatabase}";
 
         // Open a connection to the PostgreSQL database
         using var conn = new NpgsqlConnection(connectionString);
@@ -88,7 +96,9 @@ public class PostgresDatabaseHelper
                         stars double precision,
                         review_count int,
                         is_open int,
-                        categories text
+                        attributes jsonb,
+                        categories text[],
+                        hours jsonb
                     );";
             case "reviews":
                 return @"
@@ -103,6 +113,38 @@ public class PostgresDatabaseHelper
                         funny int,
                         cool int
                     );";
+            case "users":
+                return @"
+                    CREATE TABLE IF NOT EXISTS users (
+                        user_id text PRIMARY KEY,
+                        name text,
+                        review_count int,
+                        yelping_since text,
+                        friends text[],
+                        useful int,
+                        funny int,
+                        cool int,
+                        fans int,
+                        elite int[],
+                        average_stars double precision,
+                        compliment_hot int,
+                        compliment_more int,
+                        compliment_profile int,
+                        compliment_cute int,
+                        compliment_list int,
+                        compliment_note int,
+                        compliment_plain int,
+                        compliment_cool int,
+                        compliment_funny int,
+                        compliment_writer int,
+                        compliment_photos int
+                    );";
+            case "checkins":
+                return @"
+                    CREATE TABLE IF NOT EXISTS checkins (
+                        business_id text,
+                        date text
+                    );";
             default:
                 return $"CREATE TABLE IF NOT EXISTS {tableType} (data jsonb);";
         }
@@ -112,7 +154,7 @@ public class PostgresDatabaseHelper
     {
         // Build the SQL command for inserting the batch based on table type
         var sb = new StringBuilder();
-        
+
         switch (tableType.ToLower())
         {
             case "tip":
@@ -123,48 +165,43 @@ public class PostgresDatabaseHelper
                     sb.Append($"(@text{i}, @date{i}, @compliment_count{i}, @business_id{i}, @user_id{i})");
 
                     // Parse the JSON object
-                    var jsonObject = System.Text.Json.JsonDocument.Parse(jsonBatch[i]).RootElement;
-
-                    // Extract values from the JSON object
-                    string text = jsonObject.GetProperty("text").GetString() ?? string.Empty;
-                    string date = jsonObject.GetProperty("date").GetString() ?? string.Empty;
-                    int compliment_count = jsonObject.TryGetProperty("compliment_count", out var complimentCountElement) && complimentCountElement.TryGetInt32(out var count) ? count : 0;
-                    string business_id = jsonObject.GetProperty("business_id").GetString() ?? string.Empty;
-                    string user_id = jsonObject.GetProperty("user_id").GetString() ?? string.Empty;
+                    var tip = JsonSerializer.Deserialize<Tip>(jsonBatch[i]);
 
                     // Add parameters for each JSON object
-                    cmd.Parameters.AddWithValue($"text{i}", text);
-                    cmd.Parameters.AddWithValue($"date{i}", date);
-                    cmd.Parameters.AddWithValue($"compliment_count{i}", compliment_count);
-                    cmd.Parameters.AddWithValue($"business_id{i}", business_id);
-                    cmd.Parameters.AddWithValue($"user_id{i}", user_id);
+                    cmd.Parameters.AddWithValue($"text{i}", tip.Text);
+                    cmd.Parameters.AddWithValue($"date{i}", tip.Date);
+                    cmd.Parameters.AddWithValue($"compliment_count{i}", tip.ComplimentCount);
+                    cmd.Parameters.AddWithValue($"business_id{i}", tip.BusinessId);
+                    cmd.Parameters.AddWithValue($"user_id{i}", tip.UserId);
                 }
                 break;
-                
+
             case "businesses":
-                sb.Append("INSERT INTO businesses (business_id, name, address, city, state, postal_code, latitude, longitude, stars, review_count, is_open, categories) VALUES ");
+                sb.Append("INSERT INTO businesses (business_id, name, address, city, state, postal_code, latitude, longitude, stars, review_count, is_open, attributes, categories, hours) VALUES ");
                 for (int i = 0; i < jsonBatch.Count; i++)
                 {
                     if (i > 0) sb.Append(", ");
-                    sb.Append($"(@bid{i}, @name{i}, @address{i}, @city{i}, @state{i}, @postal{i}, @lat{i}, @lng{i}, @stars{i}, @review_count{i}, @is_open{i}, @categories{i})");
+                    sb.Append($"(@bid{i}, @name{i}, @address{i}, @city{i}, @state{i}, @postal{i}, @lat{i}, @lng{i}, @stars{i}, @review_count{i}, @is_open{i}, @attributes{i}, @categories{i}, @hours{i})");
 
-                    var jsonObject = System.Text.Json.JsonDocument.Parse(jsonBatch[i]).RootElement;
-                    
-                    cmd.Parameters.AddWithValue($"bid{i}", jsonObject.GetProperty("business_id").GetString() ?? string.Empty);
-                    cmd.Parameters.AddWithValue($"name{i}", jsonObject.GetProperty("name").GetString() ?? string.Empty);
-                    cmd.Parameters.AddWithValue($"address{i}", jsonObject.TryGetProperty("address", out var addr) ? addr.GetString() ?? string.Empty : string.Empty);
-                    cmd.Parameters.AddWithValue($"city{i}", jsonObject.TryGetProperty("city", out var city) ? city.GetString() ?? string.Empty : string.Empty);
-                    cmd.Parameters.AddWithValue($"state{i}", jsonObject.TryGetProperty("state", out var state) ? state.GetString() ?? string.Empty : string.Empty);
-                    cmd.Parameters.AddWithValue($"postal{i}", jsonObject.TryGetProperty("postal_code", out var postal) ? postal.GetString() ?? string.Empty : string.Empty);
-                    cmd.Parameters.AddWithValue($"lat{i}", jsonObject.TryGetProperty("latitude", out var lat) && lat.TryGetDouble(out var latVal) ? latVal : 0.0);
-                    cmd.Parameters.AddWithValue($"lng{i}", jsonObject.TryGetProperty("longitude", out var lng) && lng.TryGetDouble(out var lngVal) ? lngVal : 0.0);
-                    cmd.Parameters.AddWithValue($"stars{i}", jsonObject.TryGetProperty("stars", out var stars) && stars.TryGetDouble(out var starsVal) ? starsVal : 0.0);
-                    cmd.Parameters.AddWithValue($"review_count{i}", jsonObject.TryGetProperty("review_count", out var revCount) && revCount.TryGetInt32(out var revCountVal) ? revCountVal : 0);
-                    cmd.Parameters.AddWithValue($"is_open{i}", jsonObject.TryGetProperty("is_open", out var isOpen) && isOpen.TryGetInt32(out var isOpenVal) ? isOpenVal : 0);
-                    cmd.Parameters.AddWithValue($"categories{i}", jsonObject.TryGetProperty("categories", out var cats) ? cats.GetString() ?? string.Empty : string.Empty);
+                    var business = JsonSerializer.Deserialize<Business>(jsonBatch[i]);
+
+                    cmd.Parameters.AddWithValue($"bid{i}", business.BusinessId);
+                    cmd.Parameters.AddWithValue($"name{i}", business.Name);
+                    cmd.Parameters.AddWithValue($"address{i}", business.Address);
+                    cmd.Parameters.AddWithValue($"city{i}", business.City);
+                    cmd.Parameters.AddWithValue($"state{i}", business.State);
+                    cmd.Parameters.AddWithValue($"postal{i}", business.PostalCode);
+                    cmd.Parameters.AddWithValue($"lat{i}", business.Latitude);
+                    cmd.Parameters.AddWithValue($"lng{i}", business.Longitude);
+                    cmd.Parameters.AddWithValue($"stars{i}", business.Stars);
+                    cmd.Parameters.AddWithValue($"review_count{i}", business.ReviewCount);
+                    cmd.Parameters.AddWithValue($"is_open{i}", business.IsOpen);
+                    cmd.Parameters.AddWithValue($"attributes{i}", JsonSerializer.Serialize(business.Attributes));
+                    cmd.Parameters.AddWithValue($"categories{i}", business.Categories.ToArray());
+                    cmd.Parameters.AddWithValue($"hours{i}", JsonSerializer.Serialize(business.Hours));
                 }
                 break;
-                
+
             case "reviews":
                 sb.Append("INSERT INTO reviews (review_id, user_id, business_id, stars, date, text, useful, funny, cool) VALUES ");
                 for (int i = 0; i < jsonBatch.Count; i++)
@@ -172,20 +209,68 @@ public class PostgresDatabaseHelper
                     if (i > 0) sb.Append(", ");
                     sb.Append($"(@rid{i}, @uid{i}, @bid{i}, @stars{i}, @date{i}, @text{i}, @useful{i}, @funny{i}, @cool{i})");
 
-                    var jsonObject = System.Text.Json.JsonDocument.Parse(jsonBatch[i]).RootElement;
-                    
-                    cmd.Parameters.AddWithValue($"rid{i}", jsonObject.GetProperty("review_id").GetString() ?? string.Empty);
-                    cmd.Parameters.AddWithValue($"uid{i}", jsonObject.GetProperty("user_id").GetString() ?? string.Empty);
-                    cmd.Parameters.AddWithValue($"bid{i}", jsonObject.GetProperty("business_id").GetString() ?? string.Empty);
-                    cmd.Parameters.AddWithValue($"stars{i}", jsonObject.TryGetProperty("stars", out var stars) && stars.TryGetInt32(out var starsVal) ? starsVal : 0);
-                    cmd.Parameters.AddWithValue($"date{i}", jsonObject.GetProperty("date").GetString() ?? string.Empty);
-                    cmd.Parameters.AddWithValue($"text{i}", jsonObject.GetProperty("text").GetString() ?? string.Empty);
-                    cmd.Parameters.AddWithValue($"useful{i}", jsonObject.TryGetProperty("useful", out var useful) && useful.TryGetInt32(out var usefulVal) ? usefulVal : 0);
-                    cmd.Parameters.AddWithValue($"funny{i}", jsonObject.TryGetProperty("funny", out var funny) && funny.TryGetInt32(out var funnyVal) ? funnyVal : 0);
-                    cmd.Parameters.AddWithValue($"cool{i}", jsonObject.TryGetProperty("cool", out var cool) && cool.TryGetInt32(out var coolVal) ? coolVal : 0);
+                    var review = JsonSerializer.Deserialize<Review>(jsonBatch[i]);
+
+                    cmd.Parameters.AddWithValue($"rid{i}", review.ReviewId);
+                    cmd.Parameters.AddWithValue($"uid{i}", review.UserId);
+                    cmd.Parameters.AddWithValue($"bid{i}", review.BusinessId);
+                    cmd.Parameters.AddWithValue($"stars{i}", review.Stars);
+                    cmd.Parameters.AddWithValue($"date{i}", review.Date);
+                    cmd.Parameters.AddWithValue($"text{i}", review.Text);
+                    cmd.Parameters.AddWithValue($"useful{i}", review.Useful);
+                    cmd.Parameters.AddWithValue($"funny{i}", review.Funny);
+                    cmd.Parameters.AddWithValue($"cool{i}", review.Cool);
                 }
                 break;
-                
+
+            case "users":
+                sb.Append("INSERT INTO users (user_id, name, review_count, yelping_since, friends, useful, funny, cool, fans, elite, average_stars, compliment_hot, compliment_more, compliment_profile, compliment_cute, compliment_list, compliment_note, compliment_plain, compliment_cool, compliment_funny, compliment_writer, compliment_photos) VALUES ");
+                for (int i = 0; i < jsonBatch.Count; i++)
+                {
+                    if (i > 0) sb.Append(", ");
+                    sb.Append($"(@uid{i}, @name{i}, @review_count{i}, @yelping_since{i}, @friends{i}, @useful{i}, @funny{i}, @cool{i}, @fans{i}, @elite{i}, @average_stars{i}, @compliment_hot{i}, @compliment_more{i}, @compliment_profile{i}, @compliment_cute{i}, @compliment_list{i}, @compliment_note{i}, @compliment_plain{i}, @compliment_cool{i}, @compliment_funny{i}, @compliment_writer{i}, @compliment_photos{i})");
+
+                    var user = JsonSerializer.Deserialize<User>(jsonBatch[i]);
+
+                    cmd.Parameters.AddWithValue($"uid{i}", user.UserId);
+                    cmd.Parameters.AddWithValue($"name{i}", user.Name);
+                    cmd.Parameters.AddWithValue($"review_count{i}", user.ReviewCount);
+                    cmd.Parameters.AddWithValue($"yelping_since{i}", user.YelpingSince);
+                    cmd.Parameters.AddWithValue($"friends{i}", user.Friends.ToArray());
+                    cmd.Parameters.AddWithValue($"useful{i}", user.Useful);
+                    cmd.Parameters.AddWithValue($"funny{i}", user.Funny);
+                    cmd.Parameters.AddWithValue($"cool{i}", user.Cool);
+                    cmd.Parameters.AddWithValue($"fans{i}", user.Fans);
+                    cmd.Parameters.AddWithValue($"elite{i}", user.Elite.ToArray());
+                    cmd.Parameters.AddWithValue($"average_stars{i}", user.AverageStars);
+                    cmd.Parameters.AddWithValue($"compliment_hot{i}", user.ComplimentHot);
+                    cmd.Parameters.AddWithValue($"compliment_more{i}", user.ComplimentMore);
+                    cmd.Parameters.AddWithValue($"compliment_profile{i}", user.ComplimentProfile);
+                    cmd.Parameters.AddWithValue($"compliment_cute{i}", user.ComplimentCute);
+                    cmd.Parameters.AddWithValue($"compliment_list{i}", user.ComplimentList);
+                    cmd.Parameters.AddWithValue($"compliment_note{i}", user.ComplimentNote);
+                    cmd.Parameters.AddWithValue($"compliment_plain{i}", user.ComplimentPlain);
+                    cmd.Parameters.AddWithValue($"compliment_cool{i}", user.ComplimentCool);
+                    cmd.Parameters.AddWithValue($"compliment_funny{i}", user.ComplimentFunny);
+                    cmd.Parameters.AddWithValue($"compliment_writer{i}", user.ComplimentWriter);
+                    cmd.Parameters.AddWithValue($"compliment_photos{i}", user.ComplimentPhotos);
+                }
+                break;
+
+            case "checkins":
+                sb.Append("INSERT INTO checkins (business_id, date) VALUES ");
+                for (int i = 0; i < jsonBatch.Count; i++)
+                {
+                    if (i > 0) sb.Append(", ");
+                    sb.Append($"(@bid{i}, @date{i})");
+
+                    var checkin = JsonSerializer.Deserialize<Checkin>(jsonBatch[i]);
+
+                    cmd.Parameters.AddWithValue($"bid{i}", checkin.BusinessId);
+                    cmd.Parameters.AddWithValue($"date{i}", checkin.Date);
+                }
+                break;
+
             default:
                 sb.Append($"INSERT INTO {tableType} (data) VALUES ");
                 for (int i = 0; i < jsonBatch.Count; i++)
@@ -217,7 +302,7 @@ public class PostgresDatabaseHelper
         string? dbDatabase = Environment.GetEnvironmentVariable("POSTGRES_DB");
 
         // Construct the connection string
-        var connectionString = $"Host=localhost;Username={dbUsername};Password={dbPassword};Database={dbDatabase}";
+        var connectionString = $"Host=localhost;Port=5433;Username={dbUsername};Password={dbPassword};Database={dbDatabase}";
 
         // Results list
         var results = new List<Dictionary<string, object>>();
@@ -225,10 +310,10 @@ public class PostgresDatabaseHelper
         // Execute the query
         using var conn = new NpgsqlConnection(connectionString);
         await conn.OpenAsync();
-        
+
         using var cmd = new NpgsqlCommand(sql, conn);
         using var reader = await cmd.ExecuteReaderAsync();
-        
+
         while (await reader.ReadAsync())
         {
             var row = new Dictionary<string, object>();
@@ -256,7 +341,7 @@ public class PostgresDatabaseHelper
         string? dbDatabase = Environment.GetEnvironmentVariable("POSTGRES_DB");
 
         // Construct the connection string
-        var connectionString = $"Host=localhost;Username={dbUsername};Password={dbPassword};Database={dbDatabase}";
+        var connectionString = $"Host=localhost;Port=5433;Username={dbUsername};Password={dbPassword};Database={dbDatabase}";
 
         // Open a connection to the PostgreSQL database
         using var conn = new NpgsqlConnection(connectionString);
@@ -308,5 +393,153 @@ public class PostgresDatabaseHelper
             await cmd.ExecuteNonQueryAsync();
             Console.WriteLine("Address inserted successfully.");
         }
+    }
+
+    public async Task SetupIndexesAsync()
+    {
+        // Load the .env file
+        Env.Load();
+
+        // Get the database connection parameters
+        string? dbUsername = Environment.GetEnvironmentVariable("POSTGRES_USER");
+        string? dbPassword = Environment.GetEnvironmentVariable("POSTGRES_PASSWORD");
+        string? dbDatabase = Environment.GetEnvironmentVariable("POSTGRES_DB");
+
+        // Construct the connection string
+        var connectionString = $"Host=localhost;Port=5433;Username={dbUsername};Password={dbPassword};Database={dbDatabase}";
+
+        // Open a connection to the PostgreSQL database
+        using var conn = new NpgsqlConnection(connectionString);
+        await conn.OpenAsync();
+
+        // Check if tables exist before creating indexes
+        string[] tableTypes = { "businesses", "reviews", "users", "tips", "checkins" };
+        foreach (var tableType in tableTypes)
+        {
+            // Check if the table exists
+            string checkTableSql = $"SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = '{tableType}')";
+            using (var cmd = new NpgsqlCommand(checkTableSql, conn))
+            {
+                bool tableExists = (bool)await cmd.ExecuteScalarAsync();
+                if (!tableExists)
+                {
+                    Console.WriteLine($"Table '{tableType}' does not exist. Skipping index creation.");
+                    continue;
+                }
+            }
+
+            Console.WriteLine($"Creating indexes for {tableType}...");
+        }
+
+        // Create indexes for businesses
+        string businessIndexesSql = @"
+            -- Business indexes
+            CREATE INDEX IF NOT EXISTS idx_businesses_location ON businesses USING gist (ll_to_earth(latitude, longitude));
+            CREATE INDEX IF NOT EXISTS idx_businesses_categories ON businesses USING gin (categories);
+            CREATE INDEX IF NOT EXISTS idx_businesses_city ON businesses (city);
+            CREATE INDEX IF NOT EXISTS idx_businesses_stars ON businesses (stars DESC);
+            CREATE INDEX IF NOT EXISTS idx_businesses_review_count ON businesses (review_count DESC);
+        ";
+
+        // Create indexes for reviews
+        string reviewIndexesSql = @"
+            -- Review indexes
+            CREATE INDEX IF NOT EXISTS idx_reviews_business_id ON reviews (business_id);
+            CREATE INDEX IF NOT EXISTS idx_reviews_user_id ON reviews (user_id);
+            CREATE INDEX IF NOT EXISTS idx_reviews_date ON reviews (date DESC);
+        ";
+
+        // Create indexes for users
+        string userIndexesSql = @"
+            -- User indexes
+            CREATE INDEX IF NOT EXISTS idx_users_name ON users (name);
+            -- Note: LastActive is not in our current schema, so we'll skip that index
+        ";
+
+        // Create indexes for checkins
+        string checkinIndexesSql = @"
+            -- Checkin indexes
+            CREATE INDEX IF NOT EXISTS idx_checkins_business_id ON checkins (business_id);
+            CREATE INDEX IF NOT EXISTS idx_checkins_date ON checkins (date DESC);
+        ";
+
+        // Create indexes for tips
+        string tipIndexesSql = @"
+            -- Tip indexes
+            CREATE INDEX IF NOT EXISTS idx_tips_business_id ON tips (business_id);
+            CREATE INDEX IF NOT EXISTS idx_tips_user_id ON tips (user_id);
+            CREATE INDEX IF NOT EXISTS idx_tips_date ON tips (date DESC);
+        ";
+
+        // Execute the SQL to create indexes
+        try
+        {
+            using (var cmd = new NpgsqlCommand(businessIndexesSql, conn))
+            {
+                await cmd.ExecuteNonQueryAsync();
+                Console.WriteLine("Business indexes created successfully.");
+            }
+
+            using (var cmd = new NpgsqlCommand(reviewIndexesSql, conn))
+            {
+                await cmd.ExecuteNonQueryAsync();
+                Console.WriteLine("Review indexes created successfully.");
+            }
+
+            using (var cmd = new NpgsqlCommand(userIndexesSql, conn))
+            {
+                await cmd.ExecuteNonQueryAsync();
+                Console.WriteLine("User indexes created successfully.");
+            }
+
+            using (var cmd = new NpgsqlCommand(checkinIndexesSql, conn))
+            {
+                await cmd.ExecuteNonQueryAsync();
+                Console.WriteLine("Checkin indexes created successfully.");
+            }
+
+            using (var cmd = new NpgsqlCommand(tipIndexesSql, conn))
+            {
+                await cmd.ExecuteNonQueryAsync();
+                Console.WriteLine("Tip indexes created successfully.");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error creating indexes: {ex.Message}");
+        }
+    }
+
+    public async Task CreateAllTablesAsync()
+    {
+        // Load the .env file
+        Env.Load();
+
+        // Get the database connection parameters
+        string? dbUsername = Environment.GetEnvironmentVariable("POSTGRES_USER");
+        string? dbPassword = Environment.GetEnvironmentVariable("POSTGRES_PASSWORD");
+        string? dbDatabase = Environment.GetEnvironmentVariable("POSTGRES_DB");
+
+        // Construct the connection string
+        var connectionString = $"Host=localhost;Port=5433;Username={dbUsername};Password={dbPassword};Database={dbDatabase}";
+
+        // Open a connection to the PostgreSQL database
+        using var conn = new NpgsqlConnection(connectionString);
+        await conn.OpenAsync();
+
+        // Create tables for each entity type
+        string[] tableTypes = { "businesses", "reviews", "users", "tips", "checkins" };
+
+        foreach (var tableType in tableTypes)
+        {
+            Console.WriteLine($"Creating table for {tableType}...");
+            string createTableSql = GetCreateTableSql(tableType);
+
+            using var cmd = new NpgsqlCommand(createTableSql, conn);
+            await cmd.ExecuteNonQueryAsync();
+            Console.WriteLine($"Table for {tableType} created successfully.");
+        }
+
+        Console.WriteLine("All tables created successfully.");
     }
 }
