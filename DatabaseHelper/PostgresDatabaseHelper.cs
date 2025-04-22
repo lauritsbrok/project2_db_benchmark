@@ -3,7 +3,7 @@ using Npgsql;
 using DotNetEnv;
 using System.Text;
 
-namespace project2_db_benchmark.postgres;
+namespace project2_db_benchmark.DatabaseHelper;
 
 public class PostgresDatabaseHelper
 {
