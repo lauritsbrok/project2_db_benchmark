@@ -43,7 +43,7 @@ namespace project2_db_benchmark.postgres.Models
         public Dictionary<string, object> Attributes { get; set; }
 
         [JsonPropertyName("categories")]
-        public List<string> Categories { get; set; }
+        public string Categories { get; set; }
 
         [JsonPropertyName("hours")]
         public Dictionary<string, string> Hours { get; set; }

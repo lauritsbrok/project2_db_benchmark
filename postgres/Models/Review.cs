@@ -15,7 +15,7 @@ namespace project2_db_benchmark.postgres.Models
         public string BusinessId { get; set; }
 
         [JsonPropertyName("stars")]
-        public int Stars { get; set; }
+        public double Stars { get; set; }
 
         [JsonPropertyName("date")]
         public string Date { get; set; }
