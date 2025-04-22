@@ -1,0 +1,1 @@
+- Decide on what to do with the string list. Save it as string? Normalize? Parse it on runtime to a list of strings?

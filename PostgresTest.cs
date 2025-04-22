@@ -177,7 +177,7 @@ namespace project2_db_benchmark
             {
                 var stopwatch = new Stopwatch();
                 stopwatch.Start();
-                await _postgresHelper.InsertJsonFromFileInChunksAsync(filePath, chunkSize, "user");
+                await _postgresHelper.InsertJsonFromFileInChunksAsync(filePath, chunkSize, "users");
                 stopwatch.Stop();
 
                 Console.WriteLine($"Successfully inserted user data in {stopwatch.ElapsedMilliseconds}ms");
