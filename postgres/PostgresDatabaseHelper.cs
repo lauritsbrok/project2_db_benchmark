@@ -82,9 +82,9 @@ public class PostgresDatabaseHelper
                         business_id text,
                         user_id text
                     );";
-            case "businesses":
+            case "business":
                 return @"
-                    CREATE TABLE IF NOT EXISTS businesses (
+                    CREATE TABLE IF NOT EXISTS business (
                         business_id text PRIMARY KEY,
                         name text,
                         address text,
@@ -97,16 +97,16 @@ public class PostgresDatabaseHelper
                         review_count int,
                         is_open int,
                         attributes jsonb,
-                        categories text[],
+                        categories text,
                         hours jsonb
                     );";
-            case "reviews":
+            case "review":
                 return @"
-                    CREATE TABLE IF NOT EXISTS reviews (
+                    CREATE TABLE IF NOT EXISTS review (
                         review_id text PRIMARY KEY,
                         user_id text,
                         business_id text,
-                        stars int,
+                        stars double precision,
                         date text,
                         text text,
                         useful int,
@@ -115,33 +115,33 @@ public class PostgresDatabaseHelper
                     );";
             case "users":
                 return @"
-                    CREATE TABLE IF NOT EXISTS users (
-                        user_id text PRIMARY KEY,
-                        name text,
-                        review_count int,
-                        yelping_since text,
-                        friends text[],
-                        useful int,
-                        funny int,
-                        cool int,
-                        fans int,
-                        elite int[],
-                        average_stars double precision,
-                        compliment_hot int,
-                        compliment_more int,
-                        compliment_profile int,
-                        compliment_cute int,
-                        compliment_list int,
-                        compliment_note int,
-                        compliment_plain int,
-                        compliment_cool int,
-                        compliment_funny int,
-                        compliment_writer int,
-                        compliment_photos int
+                    CREATE TABLE IF NOT EXISTS ""users"" (
+                        ""user_id"" text PRIMARY KEY,
+                        ""name"" text,
+                        ""review_count"" int,
+                        ""yelping_since"" text,
+                        ""friends"" text[],
+                        ""useful"" int,
+                        ""funny"" int,
+                        ""cool"" int,
+                        ""fans"" int,
+                        ""elite"" int[],
+                        ""average_stars"" double precision,
+                        ""compliment_hot"" int,
+                        ""compliment_more"" int,
+                        ""compliment_profile"" int,
+                        ""compliment_cute"" int,
+                        ""compliment_list"" int,
+                        ""compliment_note"" int,
+                        ""compliment_plain"" int,
+                        ""compliment_cool"" int,
+                        ""compliment_funny"" int,
+                        ""compliment_writer"" int,
+                        ""compliment_photos"" int
                     );";
-            case "checkins":
+            case "checkin":
                 return @"
-                    CREATE TABLE IF NOT EXISTS checkins (
+                    CREATE TABLE IF NOT EXISTS checkin (
                         business_id text,
                         date text
                     );";
@@ -176,8 +176,8 @@ public class PostgresDatabaseHelper
                 }
                 break;
 
-            case "businesses":
-                sb.Append("INSERT INTO businesses (business_id, name, address, city, state, postal_code, latitude, longitude, stars, review_count, is_open, attributes, categories, hours) VALUES ");
+            case "business":
+                sb.Append("INSERT INTO business (business_id, name, address, city, state, postal_code, latitude, longitude, stars, review_count, is_open, attributes, categories, hours) VALUES ");
                 for (int i = 0; i < jsonBatch.Count; i++)
                 {
                     if (i > 0) sb.Append(", ");
@@ -185,25 +185,25 @@ public class PostgresDatabaseHelper
 
                     var business = JsonSerializer.Deserialize<Business>(jsonBatch[i]);
 
-                    cmd.Parameters.AddWithValue($"bid{i}", business.BusinessId);
-                    cmd.Parameters.AddWithValue($"name{i}", business.Name);
-                    cmd.Parameters.AddWithValue($"address{i}", business.Address);
-                    cmd.Parameters.AddWithValue($"city{i}", business.City);
-                    cmd.Parameters.AddWithValue($"state{i}", business.State);
-                    cmd.Parameters.AddWithValue($"postal{i}", business.PostalCode);
-                    cmd.Parameters.AddWithValue($"lat{i}", business.Latitude);
-                    cmd.Parameters.AddWithValue($"lng{i}", business.Longitude);
-                    cmd.Parameters.AddWithValue($"stars{i}", business.Stars);
-                    cmd.Parameters.AddWithValue($"review_count{i}", business.ReviewCount);
-                    cmd.Parameters.AddWithValue($"is_open{i}", business.IsOpen);
-                    cmd.Parameters.AddWithValue($"attributes{i}", JsonSerializer.Serialize(business.Attributes));
-                    cmd.Parameters.AddWithValue($"categories{i}", business.Categories.ToArray());
-                    cmd.Parameters.AddWithValue($"hours{i}", JsonSerializer.Serialize(business.Hours));
+                    cmd.Parameters.AddWithValue($"bid{i}", business.BusinessId ?? (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue($"name{i}", business.Name ?? (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue($"address{i}", business.Address ?? (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue($"city{i}", business.City ?? (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue($"state{i}", business.State ?? (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue($"postal{i}", business.PostalCode ?? (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue($"lat{i}", business.Latitude != 0 ? business.Latitude : (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue($"lng{i}", business.Longitude != 0 ? business.Longitude : (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue($"stars{i}", business.Stars != 0 ? business.Stars : (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue($"review_count{i}", business.ReviewCount != 0 ? business.ReviewCount : (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue($"is_open{i}", business.IsOpen != 0 ? business.IsOpen : (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue($"attributes{i}", NpgsqlTypes.NpgsqlDbType.Jsonb, business.Attributes != null ? JsonSerializer.Serialize(business.Attributes) : (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue($"categories{i}", !string.IsNullOrEmpty(business.Categories) ? business.Categories : (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue($"hours{i}", NpgsqlTypes.NpgsqlDbType.Jsonb, business.Hours != null ? JsonSerializer.Serialize(business.Hours) : (object)DBNull.Value);
                 }
                 break;
 
-            case "reviews":
-                sb.Append("INSERT INTO reviews (review_id, user_id, business_id, stars, date, text, useful, funny, cool) VALUES ");
+            case "review":
+                sb.Append("INSERT INTO review (review_id, user_id, business_id, stars, date, text, useful, funny, cool) VALUES ");
                 for (int i = 0; i < jsonBatch.Count; i++)
                 {
                     if (i > 0) sb.Append(", ");
@@ -224,7 +224,7 @@ public class PostgresDatabaseHelper
                 break;
 
             case "users":
-                sb.Append("INSERT INTO users (user_id, name, review_count, yelping_since, friends, useful, funny, cool, fans, elite, average_stars, compliment_hot, compliment_more, compliment_profile, compliment_cute, compliment_list, compliment_note, compliment_plain, compliment_cool, compliment_funny, compliment_writer, compliment_photos) VALUES ");
+                sb.Append("INSERT INTO \"users\" (\"user_id\", \"name\", \"review_count\", \"yelping_since\", \"friends\", \"useful\", \"funny\", \"cool\", \"fans\", \"elite\", \"average_stars\", \"compliment_hot\", \"compliment_more\", \"compliment_profile\", \"compliment_cute\", \"compliment_list\", \"compliment_note\", \"compliment_plain\", \"compliment_cool\", \"compliment_funny\", \"compliment_writer\", \"compliment_photos\") VALUES ");
                 for (int i = 0; i < jsonBatch.Count; i++)
                 {
                     if (i > 0) sb.Append(", ");
@@ -257,8 +257,8 @@ public class PostgresDatabaseHelper
                 }
                 break;
 
-            case "checkins":
-                sb.Append("INSERT INTO checkins (business_id, date) VALUES ");
+            case "checkin":
+                sb.Append("INSERT INTO checkin (business_id, date) VALUES ");
                 for (int i = 0; i < jsonBatch.Count; i++)
                 {
                     if (i > 0) sb.Append(", ");
@@ -413,7 +413,7 @@ public class PostgresDatabaseHelper
         await conn.OpenAsync();
 
         // Check if tables exist before creating indexes
-        string[] tableTypes = { "businesses", "reviews", "users", "tips", "checkins" };
+        string[] tableTypes = { "business", "review", "users", "tip", "checkin" };
         foreach (var tableType in tableTypes)
         {
             // Check if the table exists
@@ -434,19 +434,18 @@ public class PostgresDatabaseHelper
         // Create indexes for businesses
         string businessIndexesSql = @"
             -- Business indexes
-            CREATE INDEX IF NOT EXISTS idx_businesses_location ON businesses USING gist (ll_to_earth(latitude, longitude));
-            CREATE INDEX IF NOT EXISTS idx_businesses_categories ON businesses USING gin (categories);
-            CREATE INDEX IF NOT EXISTS idx_businesses_city ON businesses (city);
-            CREATE INDEX IF NOT EXISTS idx_businesses_stars ON businesses (stars DESC);
-            CREATE INDEX IF NOT EXISTS idx_businesses_review_count ON businesses (review_count DESC);
+            CREATE INDEX IF NOT EXISTS idx_businesses_location ON business USING gist (ll_to_earth(latitude, longitude));
+            CREATE INDEX IF NOT EXISTS idx_businesses_city ON business (city);
+            CREATE INDEX IF NOT EXISTS idx_businesses_stars ON business (stars DESC);
+            CREATE INDEX IF NOT EXISTS idx_businesses_review_count ON business (review_count DESC);
         ";
 
         // Create indexes for reviews
         string reviewIndexesSql = @"
             -- Review indexes
-            CREATE INDEX IF NOT EXISTS idx_reviews_business_id ON reviews (business_id);
-            CREATE INDEX IF NOT EXISTS idx_reviews_user_id ON reviews (user_id);
-            CREATE INDEX IF NOT EXISTS idx_reviews_date ON reviews (date DESC);
+            CREATE INDEX IF NOT EXISTS idx_reviews_business_id ON review (business_id);
+            CREATE INDEX IF NOT EXISTS idx_reviews_user_id ON review (user_id);
+            CREATE INDEX IF NOT EXISTS idx_reviews_date ON review (date DESC);
         ";
 
         // Create indexes for users
@@ -459,16 +458,15 @@ public class PostgresDatabaseHelper
         // Create indexes for checkins
         string checkinIndexesSql = @"
             -- Checkin indexes
-            CREATE INDEX IF NOT EXISTS idx_checkins_business_id ON checkins (business_id);
-            CREATE INDEX IF NOT EXISTS idx_checkins_date ON checkins (date DESC);
+            CREATE INDEX IF NOT EXISTS idx_checkins_business_id ON checkin (business_id);
         ";
 
         // Create indexes for tips
         string tipIndexesSql = @"
             -- Tip indexes
-            CREATE INDEX IF NOT EXISTS idx_tips_business_id ON tips (business_id);
-            CREATE INDEX IF NOT EXISTS idx_tips_user_id ON tips (user_id);
-            CREATE INDEX IF NOT EXISTS idx_tips_date ON tips (date DESC);
+            CREATE INDEX IF NOT EXISTS idx_tips_business_id ON tip (business_id);
+            CREATE INDEX IF NOT EXISTS idx_tips_user_id ON tip (user_id);
+            CREATE INDEX IF NOT EXISTS idx_tips_date ON tip (date DESC);
         ";
 
         // Execute the SQL to create indexes
@@ -528,7 +526,7 @@ public class PostgresDatabaseHelper
         await conn.OpenAsync();
 
         // Create tables for each entity type
-        string[] tableTypes = { "businesses", "reviews", "users", "tips", "checkins" };
+        string[] tableTypes = { "business", "review", "users", "tip", "checkin" };
 
         foreach (var tableType in tableTypes)
         {

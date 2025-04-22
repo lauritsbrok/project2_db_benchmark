@@ -24,6 +24,8 @@ namespace project2_db_benchmark
             // Test database connection
             await TestConnectionAsync();
 
+            await AddExtension();
+
             // Test table creation
             await TestTableCreationAsync();
 
@@ -45,10 +47,27 @@ namespace project2_db_benchmark
                 // Try to execute a simple query to test the connection
                 var result = await _postgresHelper.ExecuteQueryAsync("SELECT 1 as test");
                 Console.WriteLine("PostgreSQL connection successful!");
+
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"PostgreSQL connection failed: {ex.Message}");
+                throw;
+            }
+        }
+
+        private async Task AddExtension()
+        {
+            Console.WriteLine("\nAdding extension ...");
+            try
+            {
+                // Try to execute a simple query to test the connection
+                var result = await _postgresHelper.ExecuteQueryAsync("CREATE EXTENSION IF NOT EXISTS cube; CREATE EXTENSION IF NOT EXISTS earthdistance;");
+
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Extension creation failes: {ex.Message}");
                 throw;
             }
         }
@@ -97,7 +116,7 @@ namespace project2_db_benchmark
 
         private async Task TestBusinessInsertionAsync()
         {
-            string filePath = $"{_yelpDatasetPath}/yelp_academic_dataset_business.json";
+            string filePath = $"{_yelpDatasetPath}/business_reduced.json";
             int chunkSize = 100; // Smaller chunk size for testing
 
             Console.WriteLine("\nTesting business data insertion...");
@@ -106,13 +125,13 @@ namespace project2_db_benchmark
             {
                 var stopwatch = new Stopwatch();
                 stopwatch.Start();
-                await _postgresHelper.InsertJsonFromFileInChunksAsync(filePath, chunkSize, "businesses");
+                await _postgresHelper.InsertJsonFromFileInChunksAsync(filePath, chunkSize, "business");
                 stopwatch.Stop();
 
                 Console.WriteLine($"Successfully inserted business data in {stopwatch.ElapsedMilliseconds}ms");
 
                 // Verify the data was inserted
-                var count = await _postgresHelper.ExecuteQueryAsync("SELECT COUNT(*) as count FROM businesses");
+                var count = await _postgresHelper.ExecuteQueryAsync("SELECT COUNT(*) as count FROM business");
                 Console.WriteLine($"Total businesses in database: {count[0]["count"]}");
             }
             catch (Exception ex)
@@ -123,7 +142,7 @@ namespace project2_db_benchmark
 
         private async Task TestReviewInsertionAsync()
         {
-            string filePath = $"{_yelpDatasetPath}/yelp_academic_dataset_review.json";
+            string filePath = $"{_yelpDatasetPath}/review_reduced.json";
             int chunkSize = 100; // Smaller chunk size for testing
 
             Console.WriteLine("\nTesting review data insertion...");
@@ -132,13 +151,13 @@ namespace project2_db_benchmark
             {
                 var stopwatch = new Stopwatch();
                 stopwatch.Start();
-                await _postgresHelper.InsertJsonFromFileInChunksAsync(filePath, chunkSize, "reviews");
+                await _postgresHelper.InsertJsonFromFileInChunksAsync(filePath, chunkSize, "review");
                 stopwatch.Stop();
 
                 Console.WriteLine($"Successfully inserted review data in {stopwatch.ElapsedMilliseconds}ms");
 
                 // Verify the data was inserted
-                var count = await _postgresHelper.ExecuteQueryAsync("SELECT COUNT(*) as count FROM reviews");
+                var count = await _postgresHelper.ExecuteQueryAsync("SELECT COUNT(*) as count FROM review");
                 Console.WriteLine($"Total reviews in database: {count[0]["count"]}");
             }
             catch (Exception ex)
@@ -149,7 +168,7 @@ namespace project2_db_benchmark
 
         private async Task TestUserInsertionAsync()
         {
-            string filePath = $"{_yelpDatasetPath}/yelp_academic_dataset_user.json";
+            string filePath = $"{_yelpDatasetPath}/user_reduced.json";
             int chunkSize = 100; // Smaller chunk size for testing
 
             Console.WriteLine("\nTesting user data insertion...");
@@ -158,13 +177,13 @@ namespace project2_db_benchmark
             {
                 var stopwatch = new Stopwatch();
                 stopwatch.Start();
-                await _postgresHelper.InsertJsonFromFileInChunksAsync(filePath, chunkSize, "users");
+                await _postgresHelper.InsertJsonFromFileInChunksAsync(filePath, chunkSize, "user");
                 stopwatch.Stop();
 
                 Console.WriteLine($"Successfully inserted user data in {stopwatch.ElapsedMilliseconds}ms");
 
                 // Verify the data was inserted
-                var count = await _postgresHelper.ExecuteQueryAsync("SELECT COUNT(*) as count FROM users");
+                var count = await _postgresHelper.ExecuteQueryAsync("SELECT COUNT(*) as count FROM user");
                 Console.WriteLine($"Total users in database: {count[0]["count"]}");
             }
             catch (Exception ex)
@@ -175,7 +194,7 @@ namespace project2_db_benchmark
 
         private async Task TestTipInsertionAsync()
         {
-            string filePath = $"{_yelpDatasetPath}/yelp_academic_dataset_tip.json";
+            string filePath = $"{_yelpDatasetPath}/tip_reduced.json";
             int chunkSize = 100; // Smaller chunk size for testing
 
             Console.WriteLine("\nTesting tip data insertion...");
@@ -184,13 +203,13 @@ namespace project2_db_benchmark
             {
                 var stopwatch = new Stopwatch();
                 stopwatch.Start();
-                await _postgresHelper.InsertJsonFromFileInChunksAsync(filePath, chunkSize, "tips");
+                await _postgresHelper.InsertJsonFromFileInChunksAsync(filePath, chunkSize, "tip");
                 stopwatch.Stop();
 
                 Console.WriteLine($"Successfully inserted tip data in {stopwatch.ElapsedMilliseconds}ms");
 
                 // Verify the data was inserted
-                var count = await _postgresHelper.ExecuteQueryAsync("SELECT COUNT(*) as count FROM tips");
+                var count = await _postgresHelper.ExecuteQueryAsync("SELECT COUNT(*) as count FROM tip");
                 Console.WriteLine($"Total tips in database: {count[0]["count"]}");
             }
             catch (Exception ex)
@@ -201,7 +220,7 @@ namespace project2_db_benchmark
 
         private async Task TestCheckinInsertionAsync()
         {
-            string filePath = $"{_yelpDatasetPath}/yelp_academic_dataset_checkin.json";
+            string filePath = $"{_yelpDatasetPath}/checkin_reduced.json";
             int chunkSize = 100; // Smaller chunk size for testing
 
             Console.WriteLine("\nTesting checkin data insertion...");
@@ -210,13 +229,13 @@ namespace project2_db_benchmark
             {
                 var stopwatch = new Stopwatch();
                 stopwatch.Start();
-                await _postgresHelper.InsertJsonFromFileInChunksAsync(filePath, chunkSize, "checkins");
+                await _postgresHelper.InsertJsonFromFileInChunksAsync(filePath, chunkSize, "checkin");
                 stopwatch.Stop();
 
                 Console.WriteLine($"Successfully inserted checkin data in {stopwatch.ElapsedMilliseconds}ms");
 
                 // Verify the data was inserted
-                var count = await _postgresHelper.ExecuteQueryAsync("SELECT COUNT(*) as count FROM checkins");
+                var count = await _postgresHelper.ExecuteQueryAsync("SELECT COUNT(*) as count FROM checkin");
                 Console.WriteLine($"Total checkins in database: {count[0]["count"]}");
             }
             catch (Exception ex)
@@ -258,7 +277,7 @@ namespace project2_db_benchmark
                 var stopwatch = new Stopwatch();
                 stopwatch.Start();
                 var results = await _postgresHelper.ExecuteQueryAsync(
-                    "SELECT * FROM businesses WHERE stars > 4.0 LIMIT 100");
+                    "SELECT * FROM business WHERE stars > 4.0 LIMIT 100");
                 stopwatch.Stop();
 
                 Console.WriteLine($"Query executed in {stopwatch.ElapsedMilliseconds}ms");
@@ -277,7 +296,7 @@ namespace project2_db_benchmark
                 var stopwatch = new Stopwatch();
                 stopwatch.Start();
                 var results = await _postgresHelper.ExecuteQueryAsync(
-                    "SELECT * FROM businesses WHERE earth_box(ll_to_earth(37.7749, -122.4194), 5000) @> ll_to_earth(latitude, longitude) LIMIT 100");
+                    "SELECT * FROM business WHERE earth_box(ll_to_earth(37.7749, -122.4194), 5000) @> ll_to_earth(latitude, longitude) LIMIT 100");
                 stopwatch.Stop();
 
                 Console.WriteLine($"Query executed in {stopwatch.ElapsedMilliseconds}ms");
@@ -299,7 +318,7 @@ namespace project2_db_benchmark
             try
             {
                 // Get a sample business ID
-                var sampleBusiness = await _postgresHelper.ExecuteQueryAsync("SELECT business_id FROM businesses LIMIT 1");
+                var sampleBusiness = await _postgresHelper.ExecuteQueryAsync("SELECT business_id FROM business LIMIT 1");
                 if (sampleBusiness.Count == 0)
                 {
                     Console.WriteLine("No businesses found in the database.");
@@ -311,7 +330,7 @@ namespace project2_db_benchmark
                 var stopwatch = new Stopwatch();
                 stopwatch.Start();
                 var results = await _postgresHelper.ExecuteQueryAsync(
-                    $"SELECT * FROM reviews WHERE business_id = '{businessId}' LIMIT 100");
+                    $"SELECT * FROM review WHERE business_id = '{businessId}' LIMIT 100");
                 stopwatch.Stop();
 
                 Console.WriteLine($"Query executed in {stopwatch.ElapsedMilliseconds}ms");
@@ -328,18 +347,18 @@ namespace project2_db_benchmark
             Console.WriteLine("\nTesting user queries...");
 
             // Query 1: Find users by name
-            Console.WriteLine("Query 1: Find users by name (contains 'John')");
+            Console.WriteLine("Query 1: Find user by name (contains 'John')");
 
             try
             {
                 var stopwatch = new Stopwatch();
                 stopwatch.Start();
                 var results = await _postgresHelper.ExecuteQueryAsync(
-                    "SELECT * FROM users WHERE name LIKE '%John%' LIMIT 100");
+                    "SELECT * FROM user WHERE name LIKE '%John%' LIMIT 100");
                 stopwatch.Stop();
 
                 Console.WriteLine($"Query executed in {stopwatch.ElapsedMilliseconds}ms");
-                Console.WriteLine($"Found {results.Count} users with 'John' in their name");
+                Console.WriteLine($"Found {results.Count} user with 'John' in their name");
             }
             catch (Exception ex)
             {
@@ -357,7 +376,7 @@ namespace project2_db_benchmark
             try
             {
                 // Get a sample business ID
-                var sampleBusiness = await _postgresHelper.ExecuteQueryAsync("SELECT business_id FROM businesses LIMIT 1");
+                var sampleBusiness = await _postgresHelper.ExecuteQueryAsync("SELECT business_id FROM business LIMIT 1");
                 if (sampleBusiness.Count == 0)
                 {
                     Console.WriteLine("No businesses found in the database.");
@@ -369,7 +388,7 @@ namespace project2_db_benchmark
                 var stopwatch = new Stopwatch();
                 stopwatch.Start();
                 var results = await _postgresHelper.ExecuteQueryAsync(
-                    $"SELECT * FROM tips WHERE business_id = '{businessId}' LIMIT 100");
+                    $"SELECT * FROM tip WHERE business_id = '{businessId}' LIMIT 100");
                 stopwatch.Stop();
 
                 Console.WriteLine($"Query executed in {stopwatch.ElapsedMilliseconds}ms");
@@ -391,7 +410,7 @@ namespace project2_db_benchmark
             try
             {
                 // Get a sample business ID
-                var sampleBusiness = await _postgresHelper.ExecuteQueryAsync("SELECT business_id FROM businesses LIMIT 1");
+                var sampleBusiness = await _postgresHelper.ExecuteQueryAsync("SELECT business_id FROM business LIMIT 1");
                 if (sampleBusiness.Count == 0)
                 {
                     Console.WriteLine("No businesses found in the database.");
@@ -403,7 +422,7 @@ namespace project2_db_benchmark
                 var stopwatch = new Stopwatch();
                 stopwatch.Start();
                 var results = await _postgresHelper.ExecuteQueryAsync(
-                    $"SELECT * FROM checkins WHERE business_id = '{businessId}' LIMIT 100");
+                    $"SELECT * FROM checkin WHERE business_id = '{businessId}' LIMIT 100");
                 stopwatch.Stop();
 
                 Console.WriteLine($"Query executed in {stopwatch.ElapsedMilliseconds}ms");
