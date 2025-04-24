@@ -19,7 +19,7 @@ namespace project2_db_benchmark.Models.Shared
         public string YelpingSince { get; set; }
 
         [JsonPropertyName("friends")]
-        public List<string> Friends { get; set; }
+        public string Friends { get; set; }
 
         [JsonPropertyName("useful")]
         public int Useful { get; set; }
@@ -34,7 +34,7 @@ namespace project2_db_benchmark.Models.Shared
         public int Fans { get; set; }
 
         [JsonPropertyName("elite")]
-        public List<int> Elite { get; set; }
+        public string Elite { get; set; }
 
         [JsonPropertyName("average_stars")]
         public double AverageStars { get; set; }

@@ -1,11 +1,6 @@
-using DotNetEnv;
-using MongoDB.Bson;
-using MongoDB.Bson.Serialization;
-using MongoDB.Bson.Serialization.Serializers;
 using MongoDB.Driver;
 using project2_db_benchmark.Models.MongoDB;
 using project2_db_benchmark.Models.Shared;
-using System.Text.Json;
 
 namespace project2_db_benchmark.DatabaseHelper
 {
@@ -23,18 +18,10 @@ namespace project2_db_benchmark.DatabaseHelper
 
         public MongoDatabaseHelper()
         {   
-            // Load the .env file
-            Env.Load();
-
-            // Get the values from the .env file
-            string? dbUsername = Environment.GetEnvironmentVariable("MONGO_INITDB_ROOT_USERNAME");
-            string? dbPassword = Environment.GetEnvironmentVariable("MONGO_INITDB_ROOT_PASSWORD");
-            string? databaseName = Environment.GetEnvironmentVariable("MONGO_DB_NAME");
-            var connectionString = $"mongodb://{dbUsername}:{dbPassword}@localhost:27017";
+            var connectionString = $"mongodb://{Globals.MANGO_DB_USERNAME}:{Globals.MANGO_DB_PASSWORD}@localhost:27017";
 
             _client = new MongoClient(connectionString);
-            Console.WriteLine(connectionString);
-            _database = _client.GetDatabase(databaseName);
+            _database = _client.GetDatabase(Globals.MANGO_DB_NAME);
 
             // Get collections
             _businesses = _database.GetCollection<Business>("businesses");

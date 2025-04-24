@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace project2_db_benchmark.Parser;
+namespace project2_db_benchmark.Helpers;
 
 public static class Parser
 {
