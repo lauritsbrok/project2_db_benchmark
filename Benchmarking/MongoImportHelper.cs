@@ -1,4 +1,5 @@
 using project2_db_benchmark.DatabaseHelper;
+using project2_db_benchmark.Generator;
 using project2_db_benchmark.Helpers;
 using project2_db_benchmark.Models.MongoDB;
 using project2_db_benchmark.Models.Shared;
@@ -31,6 +32,12 @@ namespace project2_db_benchmark.Benchmarking
 
             int totalRecords = businesses.Count() + checkins.Count() + reviews.Count() + tips.Count() + users.Count();
             double throughput = totalRecords / totalTime;
+
+            // Used for generating sample data for randomising user story queries:
+            // await SampleDumper.DumpBusinessSample(businesses, "Samples/businesses_sample.json");
+            // await SampleDumper.DumpUserSample(users, "Samples/users_sample.json");
+            // await SampleDumper.DumpReviewSample(reviews, "Samples/reviews_sample.json");
+
 
             _mongoHelper.DeleteDatabase();
 
