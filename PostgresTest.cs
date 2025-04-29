@@ -177,13 +177,13 @@ namespace project2_db_benchmark
             {
                 var stopwatch = new Stopwatch();
                 stopwatch.Start();
-                await _postgresHelper.InsertJsonFromFileInChunksAsync(filePath, chunkSize, "user");
+                await _postgresHelper.InsertJsonFromFileInChunksAsync(filePath, chunkSize, "users");
                 stopwatch.Stop();
 
                 Console.WriteLine($"Successfully inserted user data in {stopwatch.ElapsedMilliseconds}ms");
 
                 // Verify the data was inserted
-                var count = await _postgresHelper.ExecuteQueryAsync("SELECT COUNT(*) as count FROM user");
+                var count = await _postgresHelper.ExecuteQueryAsync("SELECT COUNT(*) as count FROM users");
                 Console.WriteLine($"Total users in database: {count[0]["count"]}");
             }
             catch (Exception ex)

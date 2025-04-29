@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace project2_db_benchmark.postgres.Models
@@ -19,6 +20,7 @@ namespace project2_db_benchmark.postgres.Models
         public string YelpingSince { get; set; }
 
         [JsonPropertyName("friends")]
+        [JsonConverter(typeof(FriendsConverter))]
         public List<string> Friends { get; set; }
 
         [JsonPropertyName("useful")]
@@ -71,5 +73,34 @@ namespace project2_db_benchmark.postgres.Models
 
         [JsonPropertyName("compliment_photos")]
         public int ComplimentPhotos { get; set; }
+    }
+
+    public class FriendsConverter : JsonConverter<List<string>>
+    {
+        public override List<string> Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        {
+            if (reader.TokenType == JsonTokenType.String)
+            {
+                string friendsString = reader.GetString();
+                if (string.IsNullOrEmpty(friendsString))
+                    return new List<string>();
+
+                return friendsString.Split(',').Select(f => f.Trim()).ToList();
+            }
+            else if (reader.TokenType == JsonTokenType.StartArray)
+            {
+                return JsonSerializer.Deserialize<List<string>>(ref reader, options);
+            }
+
+            throw new JsonException("Unexpected token type for friends field");
+        }
+
+        public override void Write(Utf8JsonWriter writer, List<string> value, JsonSerializerOptions options)
+        {
+            if (value == null)
+                writer.WriteNullValue();
+            else
+                JsonSerializer.Serialize(writer, value, options);
+        }
     }
 }

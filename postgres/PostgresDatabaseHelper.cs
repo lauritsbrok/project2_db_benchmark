@@ -224,7 +224,7 @@ public class PostgresDatabaseHelper
                 break;
 
             case "users":
-                sb.Append("INSERT INTO \"users\" (\"user_id\", \"name\", \"review_count\", \"yelping_since\", \"friends\", \"useful\", \"funny\", \"cool\", \"fans\", \"elite\", \"average_stars\", \"compliment_hot\", \"compliment_more\", \"compliment_profile\", \"compliment_cute\", \"compliment_list\", \"compliment_note\", \"compliment_plain\", \"compliment_cool\", \"compliment_funny\", \"compliment_writer\", \"compliment_photos\") VALUES ");
+                sb.Append("INSERT INTO users (user_id, name, review_count, yelping_since, friends, useful, funny, cool, fans, elite, average_stars, compliment_hot, compliment_more, compliment_profile, compliment_cute, compliment_list, compliment_note, compliment_plain, compliment_cool, compliment_funny, compliment_writer, compliment_photos) VALUES ");
                 for (int i = 0; i < jsonBatch.Count; i++)
                 {
                     if (i > 0) sb.Append(", ");
