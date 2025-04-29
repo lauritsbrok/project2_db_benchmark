@@ -1,5 +1,8 @@
 using DotNetEnv;
 
+#pragma warning disable CS8618
+#pragma warning disable CS8601
+
 namespace project2_db_benchmark
 {
     public static class Globals
@@ -35,3 +38,6 @@ namespace project2_db_benchmark
         }
     }
 }
+
+#pragma warning restore CS8618
+#pragma warning restore CS8601

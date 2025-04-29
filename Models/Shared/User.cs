@@ -1,6 +1,6 @@
-using System;
-using System.Collections.Generic;
 using System.Text.Json.Serialization;
+
+#pragma warning disable CS8618
 
 namespace project2_db_benchmark.Models.Shared
 {
@@ -72,4 +72,8 @@ namespace project2_db_benchmark.Models.Shared
         [JsonPropertyName("compliment_photos")]
         public int ComplimentPhotos { get; set; }
     }
+
+    
 }
+
+#pragma warning restore CS8618

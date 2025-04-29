@@ -1,6 +1,8 @@
 using System;
 using System.Text.Json.Serialization;
 
+#pragma warning disable CS8618
+
 namespace project2_db_benchmark.Models.Shared
 {
     public class Checkin
@@ -12,3 +14,5 @@ namespace project2_db_benchmark.Models.Shared
         public string Date { get; set; }
     }
 }
+
+#pragma warning restore CS8618

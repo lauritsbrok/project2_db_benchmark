@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
+#pragma warning disable CS8618
+
 namespace project2_db_benchmark.Models.Postgres
 {
     public class Business
@@ -49,3 +51,5 @@ namespace project2_db_benchmark.Models.Postgres
         public Dictionary<string, string> Hours { get; set; }
     }
 }
+
+#pragma warning restore CS8618

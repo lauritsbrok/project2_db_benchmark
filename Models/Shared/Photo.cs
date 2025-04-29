@@ -1,6 +1,6 @@
-using System;
-using System.Collections.Generic;
 using System.Text.Json.Serialization;
+
+#pragma warning disable CS8618
 
 namespace project2_db_benchmark.Models.Shared
 {
@@ -19,3 +19,5 @@ namespace project2_db_benchmark.Models.Shared
         public string Label { get; set; }
     }
 }
+
+#pragma warning restore CS8618
