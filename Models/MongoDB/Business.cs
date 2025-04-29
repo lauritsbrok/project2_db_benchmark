@@ -4,6 +4,8 @@ using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 using project2_db_benchmark.Models.Shared;
 
+#pragma warning disable CS8618
+
 namespace project2_db_benchmark.Models.MongoDB
 {
     public class Business
@@ -89,3 +91,5 @@ namespace project2_db_benchmark.Models.MongoDB
         }
     }
 }
+
+#pragma warning restore CS8618

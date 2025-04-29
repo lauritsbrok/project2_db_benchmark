@@ -1,5 +1,6 @@
-using System;
 using System.Text.Json.Serialization;
+
+#pragma warning disable CS8618
 
 namespace project2_db_benchmark.Models.Shared
 {
@@ -21,3 +22,5 @@ namespace project2_db_benchmark.Models.Shared
         required public string UserId { get; set; }
     }
 }
+
+#pragma warning restore CS8618

@@ -3,19 +3,20 @@ using project2_db_benchmark.Helpers;
 using project2_db_benchmark.Models.Postgres;
 using project2_db_benchmark.Models.Shared;
 
+
+
 namespace project2_db_benchmark.Benchmarking
 {
     public class PostgresImportHelper()
     {
         private readonly PostgresDatabaseHelper _postgresHelper = new();
-        public async Task<double> LoadAndInsert()
-        {
-            IEnumerable<Business> businesses = await Parser.Parse<Business>($"yelp_dataset/{Globals.BUSINESS_JSON_FILE_NAME}");
-            IEnumerable<Checkin> checkins = await Parser.Parse<Checkin>($"yelp_dataset/{Globals.CHECKIN_JSON_FILE_NAME}");
-            IEnumerable<Review> reviews = await Parser.Parse<Review>($"yelp_dataset/{Globals.REVIEW_JSON_FILE_NAME}");
-            IEnumerable<Tip> tips = await Parser.Parse<Tip>($"yelp_dataset/{Globals.TIP_JSON_FILE_NAME}");
-            IEnumerable<User> users = await Parser.Parse<User>($"yelp_dataset/{Globals.USER_JSON_FILE_NAME}");
-            IEnumerable<Photo> photos = await Parser.Parse<Photo>($"yelp_dataset/{Globals.PHOTO_JSON_FILE_NAME}");
+        public async Task<(double, double, List<double>)> LoadAndInsert(){
+            IEnumerable<Business> businesses = await Parser.Parse<Business>("yelp_dataset/business_reduced.json");
+            IEnumerable<Checkin> checkins = await Parser.Parse<Checkin>("yelp_dataset/checkin_reduced.json");
+            IEnumerable<Review> reviews = await Parser.Parse<Review>("yelp_dataset/review_reduced.json");
+            IEnumerable<Tip> tips = await Parser.Parse<Tip>("yelp_dataset/tip_reduced.json");
+            IEnumerable<User> users = await Parser.Parse<User>("yelp_dataset/user_reduced.json");
+            IEnumerable<Photo> photos = await Parser.Parse<Photo>("yelp_dataset/photo_reduced.json");
 
             var inserts = new List<Func<Task>>();
 
@@ -26,9 +27,12 @@ namespace project2_db_benchmark.Benchmarking
             inserts.AddRange(users.Select<User, Func<Task>>(u => () => _postgresHelper.InsertUserAsync(u)));
             inserts.AddRange(photos.Select<Photo, Func<Task>>(u => () => _postgresHelper.InsertPhotoAsync(u)));
 
-            var result = await ConcurrentBenchmarkHelper.RunTasks(inserts);
+            var (totalTime, latencies) = await ConcurrentBenchmarkHelper.RunTasks(inserts);
 
-            return result;
+            int totalRecords = businesses.Count() + checkins.Count() + reviews.Count() + tips.Count() + users.Count();
+            double throughput = totalRecords / totalTime;
+
+            return (totalTime, throughput, latencies);;
         }
     }
 }

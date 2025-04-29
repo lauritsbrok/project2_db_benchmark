@@ -1,4 +1,4 @@
-using DotNetEnv;
+﻿using DotNetEnv;
 using project2_db_benchmark;
 using project2_db_benchmark.Benchmarking;
 
@@ -11,11 +11,11 @@ MongoImportHelper mongoImportHelper = new();
 PostgresImportHelper postgresImportHelper = new();
 
 Console.WriteLine("Benchmarking insert in Mongo DB ...");
-var mongo_insert_benchmark = await mongoImportHelper.LoadAndInsert();
-Console.WriteLine($"Mongo insert took {mongo_insert_benchmark} seconds");
+var (totalTime, throughput, latencies) = await mongoImportHelper.BenchmarkInsert();
+Console.WriteLine($"Mongo insert took {totalTime} seconds and had an average throughput of {throughput} tuples pr second");
+Console.WriteLine($"Average Latency: {latencies.Average():F2} ms");
 
-Console.WriteLine("Benchmarking insert in Postgres DB ...");
+Console.WriteLine("Benchmarking insert in Postgres ...");
 var postgres_insert_benchmark = await postgresImportHelper.LoadAndInsert();
-Console.WriteLine($"Postgres insert took {postgres_insert_benchmark} seconds");
-
+Console.WriteLine($"All data inserted in Mongo DB");
 
