@@ -37,45 +37,91 @@ public class Generator
     }
 
     private Instruction GenerateInstruction(InstructionType type)
+{
+    return type switch
     {
-        return type switch
+        InstructionType.CreateUser => new Instruction
         {
-            InstructionType.CreateUser => new Instruction
+            Type = type,
+            Parameters = new Dictionary<string, string>
             {
-                Type = type,
-                Parameters = new Dictionary<string, string>
-                {
-                    { "name", $"user_{_random.Next(10000)}" }
-                }
-            },
+                { "name", $"user_{_random.Next(10000)}" }
+            }
+        },
 
-            InstructionType.SearchBusiness => new Instruction
+        InstructionType.SearchBusiness => new Instruction
+        {
+            Type = type,
+            Parameters = new Dictionary<string, string>
             {
-                Type = type,
-                Parameters = new Dictionary<string, string>
-                {
-                    { "category", GetRandomBusinessCategory() },
-                    { "city", GetRandomCity() }
-                }
-            },
+                { "category", GetRandomBusinessCategory() },
+                { "city", GetRandomCity() }
+            }
+        },
 
-            InstructionType.PostReview => new Instruction
+        InstructionType.ViewBusiness => new Instruction
+        {
+            Type = type,
+            Parameters = new Dictionary<string, string>
             {
-                Type = type,
-                Parameters = new Dictionary<string, string>
-                {
-                    { "user_id", GetRandomUserId() },
-                    { "business_id", GetRandomBusinessId() },
-                    { "stars", (_random.Next(1, 6)).ToString() },
-                    { "text", "This is a test review." }
-                }
-            },
+                { "business_id", GetRandomBusinessId() }
+            }
+        },
 
-            // Add other instruction types here...
+        InstructionType.PostReview => new Instruction
+        {
+            Type = type,
+            Parameters = new Dictionary<string, string>
+            {
+                { "user_id", GetRandomUserId() },
+                { "business_id", GetRandomBusinessId() },
+                { "stars", (_random.Next(1, 6)).ToString() },
+                { "text", "This is a test review." }
+            }
+        },
 
-            _ => throw new NotImplementedException()
-        };
-    }
+        InstructionType.PostTip => new Instruction
+        {
+            Type = type,
+            Parameters = new Dictionary<string, string>
+            {
+                { "user_id", GetRandomUserId() },
+                { "business_id", GetRandomBusinessId() },
+                { "text", "Helpful tip!" }
+            }
+        },
+
+        InstructionType.ViewUser => new Instruction
+        {
+            Type = type,
+            Parameters = new Dictionary<string, string>
+            {
+                { "user_id", GetRandomUserId() }
+            }
+        },
+
+        InstructionType.ViewPhotos => new Instruction
+        {
+            Type = type,
+            Parameters = new Dictionary<string, string>
+            {
+                { "business_id", GetRandomBusinessId() }
+            }
+        },
+
+        InstructionType.Checkin => new Instruction
+        {
+            Type = type,
+            Parameters = new Dictionary<string, string>
+            {
+                { "business_id", GetRandomBusinessId() },
+                { "timestamp", DateTime.UtcNow.ToString("o") }
+            }
+        },
+
+        _ => throw new NotImplementedException()
+    };
+}
 
     public List<Instruction> GetInstructions() => _instructionSet;
 
@@ -117,17 +163,20 @@ public class Generator
         return _cities[_random.Next(_cities.Count)];
     }
 
-    public async void Generate(){
-        var generator = new Generator(seed: 123); // Using a fixed seed for reproducibility
-        await generator.InitialiseAsync(); // Load your sample data
+    public async Task Generate(){
+        Console.WriteLine("Initialising generator");
+        await InitialiseAsync(); // Load your sample data
 
+        Console.WriteLine("Generating instructions...");
         // Generate 10000 instructions
-        generator.GenerateInstructions(10000);
+        GenerateInstructions(10000);
 
         // Get the generated instructions
-        var instructions = generator.GetInstructions();
+        var instructions = GetInstructions();
 
+        Console.WriteLine("Serialising");
         // Save instructions to a file (optional)
         await InstructionSerializer.SaveInstructionsAsync(instructions, "instruction-set.json");
+        Console.WriteLine("Done");
     }
 }
