@@ -115,7 +115,7 @@ public class Generator
             Parameters = new Dictionary<string, string>
             {
                 { "business_id", GetRandomBusinessId() },
-                { "timestamp", DateTime.UtcNow.ToString("o") }
+                { "timestamp", DateTime.UtcNow.ToString() }
             }
         },
 
