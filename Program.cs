@@ -1,17 +1,23 @@
 using DotNetEnv;
 using project2_db_benchmark;
 using project2_db_benchmark.Benchmarking;
-using project2_db_benchmark.DatabaseHelper;
 
 Env.Load();
 
 
 // Initialize MongoDB helper
 Globals.Init();
-// MongoImportHelper mongoImportHelper = new();
+MongoImportHelper mongoImportHelper = new();
 PostgresImportHelper postgresImportHelper = new();
 
-Console.WriteLine("Inserting into Mongo DB...");
-// await mongoImportHelper.ImportJsonFiles();
-await postgresImportHelper.ImportJsonFiles();
+Console.WriteLine("Benchmarking insert in Mongo DB ...");
+var mongo_insert_benchmark = await mongoImportHelper.LoadAndInsert();
+Console.WriteLine($"Mongo insert took {mongo_insert_benchmark} seconds");
+
+Console.WriteLine("Benchmarking insert in Postgres DB ...");
+var postgres_insert_benchmark = await postgresImportHelper.LoadAndInsert();
+Console.WriteLine($"Postgres insert took {postgres_insert_benchmark} seconds");
+
+// await postgresImportHelper.ImportJsonFiles();
 Console.WriteLine($"All data inserted in Mongo DB");
+
