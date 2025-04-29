@@ -15,3 +15,4 @@ var mongo_insert_benchmark = await mongoImportHelper.BenchmarkInsert();
 Console.WriteLine($"Mongo insert took {mongo_insert_benchmark} seconds");
 // await postgresImportHelper.ImportJsonFiles();
 Console.WriteLine($"All data inserted in Mongo DB");
+

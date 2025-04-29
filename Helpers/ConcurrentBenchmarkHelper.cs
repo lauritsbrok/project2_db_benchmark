@@ -1,22 +1,20 @@
-using MongoDB.Driver;
-
 namespace project2_db_benchmark.Helpers;
 
-public static class SemaphoreHelper{
+public static class ConcurrentBenchmarkHelper{
 
     private static readonly SemaphoreSlim _semaphore = new (8);
-    public static async Task<double> GetTasks(List<Func<Task>> inserts){
+    public static async Task<double> RunTasks(List<Func<Task>> tasks){
 
     
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
 
 
-        var tasks = inserts.Select(async insert => 
+        var tasklist = tasks.Select(async task => 
         {
             await _semaphore.WaitAsync();
             try
             {
-                await insert();
+                await task();
             }
             finally
             {
@@ -24,7 +22,7 @@ public static class SemaphoreHelper{
             }
         });
 
-        await Task.WhenAll(tasks);
+        await Task.WhenAll(tasklist);
 
         stopwatch.Stop();
     

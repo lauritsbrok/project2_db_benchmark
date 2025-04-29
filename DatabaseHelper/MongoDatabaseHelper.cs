@@ -114,5 +114,10 @@ namespace project2_db_benchmark.DatabaseHelper
         {
             await _tips.InsertOneAsync(tip);
         }
+
+        public void DeleteDatabase()
+        {
+            _client.DropDatabase(Globals.MANGO_DB_NAME);
+        }
     }
 } 

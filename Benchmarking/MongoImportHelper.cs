@@ -18,8 +18,6 @@ namespace project2_db_benchmark.Benchmarking
             IEnumerable<Tip> tips = await Parser.Parse<Tip>("yelp_dataset/tip_reduced.json");
             IEnumerable<User> users = await Parser.Parse<User>("yelp_dataset/user_reduced.json");
 
-            var allInsertTasks = new List<Task>();
-
             var inserts = new List<Func<Task>>();
 
             inserts.AddRange(businesses.Select<Business, Func<Task>>(b => () => _mongoHelper.InsertBusinessAsync(b)));
@@ -28,7 +26,9 @@ namespace project2_db_benchmark.Benchmarking
             inserts.AddRange(tips.Select<Tip, Func<Task>>(t => () => _mongoHelper.InsertTipAsync(t)));
             inserts.AddRange(users.Select<User, Func<Task>>(u => () => _mongoHelper.InsertUserAsync(u)));
 
-            var result = await SemaphoreHelper.GetTasks(inserts);
+            var result = await ConcurrentBenchmarkHelper.RunTasks(inserts);
+
+            _mongoHelper.DeleteDatabase();
             
             return result;
         }
