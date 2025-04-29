@@ -8,7 +8,7 @@ Env.Load();
 
 // Initialize MongoDB helper
 Globals.Init();
-MongoImportHelper mongoImportHelper = new();
+// MongoImportHelper mongoImportHelper = new();
 PostgresImportHelper postgresImportHelper = new();
 
 Console.WriteLine("Inserting into Mongo DB...");
