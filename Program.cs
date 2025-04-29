@@ -1,38 +1,17 @@
-﻿// using System;
-// using System.Threading.Tasks;
-// using project2_db_benchmark;
+using DotNetEnv;
+using project2_db_benchmark;
+using project2_db_benchmark.Benchmarking;
+using project2_db_benchmark.DatabaseHelper;
 
-// namespace project2_db_benchmark
-// {
-//     class Program
-//     {
-//         static async Task Main(string[] args)
-//         {
-//             Console.WriteLine("Database Benchmark Tool");
-//             Console.WriteLine("=======================");
+Env.Load();
 
-//             // Get MongoDB connection string
-//             Console.Write("Enter MongoDB connection string (default: mongodb://localhost:27017): ");
-//             string mongoConnectionString = Console.ReadLine();
-//             if (string.IsNullOrWhiteSpace(mongoConnectionString))
-//             {
-//                 mongoConnectionString = "mongodb://localhost:27017";
-//             }
 
-//             // Get Yelp dataset path
-//             Console.Write("Enter path to Yelp dataset folder (default: ./yelp_dataset): ");
-//             string yelpDatasetPath = Console.ReadLine();
-//             if (string.IsNullOrWhiteSpace(yelpDatasetPath))
-//             {
-//                 yelpDatasetPath = "./yelp_dataset";
-//             }
+// Initialize MongoDB helper
+Globals.Init();
+MongoImportHelper mongoImportHelper = new();
+PostgresImportHelper postgresImportHelper = new();
 
-//             // Create and run the benchmark
-//             var benchmark = new DatabaseBenchmark(mongoConnectionString, yelpDatasetPath);
-//             await benchmark.RunBenchmarkAsync();
-
-//             Console.WriteLine("Press any key to exit...");
-//             Console.ReadKey();
-//         }
-//     }
-// }
+Console.WriteLine("Inserting into Mongo DB...");
+await mongoImportHelper.ImportJsonFiles();
+await postgresImportHelper.ImportJsonFiles();
+Console.WriteLine($"All data inserted in Mongo DB");
