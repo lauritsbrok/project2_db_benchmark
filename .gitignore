@@ -402,3 +402,4 @@ FodyWeavers.xsd
 .DS_Store
 yelp_dataset
 .env
+.vscode
