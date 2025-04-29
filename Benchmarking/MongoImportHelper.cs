@@ -9,9 +9,10 @@ namespace project2_db_benchmark.Benchmarking
     {
         private readonly MongoDatabaseHelper _mongoHelper = new();
 
-        private async Task<(double, double, List<double>)> LoadAndInsert(){
-            IEnumerable<Business> businesses = await Parser.Parse<Business>("yelp_dataset/business_reduced.json");
-            IEnumerable<Photo> photos = await Parser.Parse<Photo>("yelp_dataset/photo_reduced.json");
+        public async Task<(double, double, List<double>)> LoadAndInsert()
+        {
+            IEnumerable<Business> businesses = await Parser.Parse<Business>($"yelp_dataset/{Globals.BUSINESS_JSON_FILE_NAME}");
+            IEnumerable<Photo> photos = await Parser.Parse<Photo>($"yelp_dataset/{Globals.PHOTO_JSON_FILE_NAME}");
             businesses = Business.AttachPhotosToBusinesses(businesses, photos);
             IEnumerable<Checkin> checkins = await Parser.Parse<Checkin>($"yelp_dataset/{Globals.CHECKIN_JSON_FILE_NAME}");
             IEnumerable<Review> reviews = await Parser.Parse<Review>($"yelp_dataset/{Globals.REVIEW_JSON_FILE_NAME}");
@@ -32,15 +33,10 @@ namespace project2_db_benchmark.Benchmarking
             double throughput = totalRecords / totalTime;
 
             _mongoHelper.DeleteDatabase();
-            
+
             return (totalTime, throughput, latencies);
         }
 
 
-        public async Task<(double, double, List<double>)> BenchmarkInsert(){
-            return await LoadAndInsert();
-        }
-
-        
     }
 }
