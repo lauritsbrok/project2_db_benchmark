@@ -7,31 +7,31 @@ namespace project2_db_benchmark.Models.Shared
     public class Review
     {
         [JsonPropertyName("review_id")]
-        public string ReviewId { get; set; }
+        required public string ReviewId { get; set; }
 
         [JsonPropertyName("user_id")]
-        public string UserId { get; set; }
+        required public string UserId { get; set; }
 
         [JsonPropertyName("business_id")]
-        public string BusinessId { get; set; }
+        required public string BusinessId { get; set; }
 
         [JsonPropertyName("stars")]
-        public double Stars { get; set; }
+        required public double Stars { get; set; }
 
         [JsonPropertyName("date")]
-        public string Date { get; set; }
+        required public string Date { get; set; }
 
         [JsonPropertyName("text")]
-        public string Text { get; set; }
+        public string? Text { get; set; }
 
         [JsonPropertyName("useful")]
-        public int Useful { get; set; }
+        public int? Useful { get; set; }
 
         [JsonPropertyName("funny")]
-        public int Funny { get; set; }
+        public int? Funny { get; set; }
 
         [JsonPropertyName("cool")]
-        public int Cool { get; set; }
+        public int? Cool { get; set; }
     }
 }
 

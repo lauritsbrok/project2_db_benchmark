@@ -1,336 +1,322 @@
 using System;
+using System.Text.Json;
 using Npgsql;
-using DotNetEnv;
-using System.Text;
+using NpgsqlTypes;
 using project2_db_benchmark.Models.Postgres;
 using project2_db_benchmark.Models.Shared;
 
 namespace project2_db_benchmark.DatabaseHelper;
 
-public class PostgresDatabaseHelper
+public class PostgresDatabaseHelper : IDisposable
 {
-    public async Task InsertJsonFromFileInChunksAsync(string filePath, int chunkSize = 1000, string tableType = "tip")
+    private readonly NpgsqlDataSource _dataSource;
+
+    public PostgresDatabaseHelper()
     {
-        // Construct the connection string
-        var connectionString = $"Host=localhost;Username={Globals.POSTGRES_USER};Password={Globals.POSTGRES_USER};Database={Globals.POSTGRES_DB}";
+        var dataSourceBuilder = new NpgsqlDataSourceBuilder($"Host=localhost;Port=5433;Username={Globals.POSTGRES_USER};Password={Globals.POSTGRES_PASSWORD};Database={Globals.POSTGRES_DB}");
+        dataSourceBuilder.EnableDynamicJson();
+        _dataSource = dataSourceBuilder.Build();
 
-        // Open a connection to the PostgreSQL database
-        using var conn = new NpgsqlConnection(connectionString);
-        await conn.OpenAsync();
-
-        // Initialize a list to hold the JSON objects for the current chunk
-        var jsonBatch = new List<string>();
-
-        // Read lines from the file (efficient memory usage with ReadLines)
-        var lines = File.ReadLines(filePath);
-        int count = 0;
-
-        // Prepare the SQL command for batched insert based on table type
-        string createTablesSql = GetCreateTableSql(tableType);
-        using var cmd = new NpgsqlCommand(createTablesSql, conn);
-        await cmd.ExecuteNonQueryAsync();
-
-        foreach (var line in lines)
-        {
-            jsonBatch.Add(line); // Add the JSON object to the current batch
-
-            if (jsonBatch.Count >= chunkSize)
-            {
-                // If the batch is full, insert it into the database
-                await InsertBatchAsync(cmd, jsonBatch, tableType);
-
-                // Clear the batch for the next chunk
-                jsonBatch.Clear();
-            }
-
-            count++;
-        }
-
-        // If there are any remaining JSON blobs in the last chunk, insert them
-        if (jsonBatch.Count > 0)
-        {
-            await InsertBatchAsync(cmd, jsonBatch, tableType);
-        }
-
-        Console.WriteLine($"Inserted {count} records into {tableType}.");
+        // Drop and recreate database tables
+        InitializeDatabase().Wait();
     }
 
-    private string GetCreateTableSql(string tableType)
+    private async Task InitializeDatabase()
     {
-        switch (tableType.ToLower())
-        {
-            case "tip":
-                return @"
-                    CREATE TABLE IF NOT EXISTS tip (
-                        text text,
-                        date text,
-                        compliment_count INT,
-                        business_id text,
-                        user_id text
-                    );";
-            case "businesses":
-                return @"
-                    CREATE TABLE IF NOT EXISTS businesses (
-                        business_id text PRIMARY KEY,
-                        name text,
-                        address text,
-                        city text,
-                        state text,
-                        postal_code text,
-                        latitude double precision,
-                        longitude double precision,
-                        stars double precision,
-                        review_count int,
-                        is_open int,
-                        categories text
-                    );";
-            case "reviews":
-                return @"
-                    CREATE TABLE IF NOT EXISTS reviews (
-                        review_id text PRIMARY KEY,
-                        user_id text,
-                        business_id text,
-                        stars int,
-                        date text,
-                        text text,
-                        useful int,
-                        funny int,
-                        cool int
-                    );";
-            default:
-                return $"CREATE TABLE IF NOT EXISTS {tableType} (data jsonb);";
-        }
-    }
+        await using var conn = await _dataSource.OpenConnectionAsync();
+        await using var cmd = conn.CreateCommand();
 
-    private async Task InsertBatchAsync(NpgsqlCommand cmd, List<string> jsonBatch, string tableType = "tip")
-    {
-        // Build the SQL command for inserting the batch based on table type
-        var sb = new StringBuilder();
-        
-        switch (tableType.ToLower())
-        {
-            case "tip":
-                sb.Append("INSERT INTO tip (text, date, compliment_count, business_id, user_id) VALUES ");
-                for (int i = 0; i < jsonBatch.Count; i++)
-                {
-                    if (i > 0) sb.Append(", ");
-                    sb.Append($"(@text{i}, @date{i}, @compliment_count{i}, @business_id{i}, @user_id{i})");
-
-                    // Parse the JSON object
-                    var jsonObject = System.Text.Json.JsonDocument.Parse(jsonBatch[i]).RootElement;
-
-                    // Extract values from the JSON object
-                    string text = jsonObject.GetProperty("text").GetString() ?? string.Empty;
-                    string date = jsonObject.GetProperty("date").GetString() ?? string.Empty;
-                    int compliment_count = jsonObject.TryGetProperty("compliment_count", out var complimentCountElement) && complimentCountElement.TryGetInt32(out var count) ? count : 0;
-                    string business_id = jsonObject.GetProperty("business_id").GetString() ?? string.Empty;
-                    string user_id = jsonObject.GetProperty("user_id").GetString() ?? string.Empty;
-
-                    // Add parameters for each JSON object
-                    cmd.Parameters.AddWithValue($"text{i}", text);
-                    cmd.Parameters.AddWithValue($"date{i}", date);
-                    cmd.Parameters.AddWithValue($"compliment_count{i}", compliment_count);
-                    cmd.Parameters.AddWithValue($"business_id{i}", business_id);
-                    cmd.Parameters.AddWithValue($"user_id{i}", user_id);
-                }
-                break;
-                
-            case "businesses":
-                sb.Append("INSERT INTO businesses (business_id, name, address, city, state, postal_code, latitude, longitude, stars, review_count, is_open, categories) VALUES ");
-                for (int i = 0; i < jsonBatch.Count; i++)
-                {
-                    if (i > 0) sb.Append(", ");
-                    sb.Append($"(@bid{i}, @name{i}, @address{i}, @city{i}, @state{i}, @postal{i}, @lat{i}, @lng{i}, @stars{i}, @review_count{i}, @is_open{i}, @categories{i})");
-
-                    var jsonObject = System.Text.Json.JsonDocument.Parse(jsonBatch[i]).RootElement;
-                    
-                    cmd.Parameters.AddWithValue($"bid{i}", jsonObject.GetProperty("business_id").GetString() ?? string.Empty);
-                    cmd.Parameters.AddWithValue($"name{i}", jsonObject.GetProperty("name").GetString() ?? string.Empty);
-                    cmd.Parameters.AddWithValue($"address{i}", jsonObject.TryGetProperty("address", out var addr) ? addr.GetString() ?? string.Empty : string.Empty);
-                    cmd.Parameters.AddWithValue($"city{i}", jsonObject.TryGetProperty("city", out var city) ? city.GetString() ?? string.Empty : string.Empty);
-                    cmd.Parameters.AddWithValue($"state{i}", jsonObject.TryGetProperty("state", out var state) ? state.GetString() ?? string.Empty : string.Empty);
-                    cmd.Parameters.AddWithValue($"postal{i}", jsonObject.TryGetProperty("postal_code", out var postal) ? postal.GetString() ?? string.Empty : string.Empty);
-                    cmd.Parameters.AddWithValue($"lat{i}", jsonObject.TryGetProperty("latitude", out var lat) && lat.TryGetDouble(out var latVal) ? latVal : 0.0);
-                    cmd.Parameters.AddWithValue($"lng{i}", jsonObject.TryGetProperty("longitude", out var lng) && lng.TryGetDouble(out var lngVal) ? lngVal : 0.0);
-                    cmd.Parameters.AddWithValue($"stars{i}", jsonObject.TryGetProperty("stars", out var stars) && stars.TryGetDouble(out var starsVal) ? starsVal : 0.0);
-                    cmd.Parameters.AddWithValue($"review_count{i}", jsonObject.TryGetProperty("review_count", out var revCount) && revCount.TryGetInt32(out var revCountVal) ? revCountVal : 0);
-                    cmd.Parameters.AddWithValue($"is_open{i}", jsonObject.TryGetProperty("is_open", out var isOpen) && isOpen.TryGetInt32(out var isOpenVal) ? isOpenVal : 0);
-                    cmd.Parameters.AddWithValue($"categories{i}", jsonObject.TryGetProperty("categories", out var cats) ? cats.GetString() ?? string.Empty : string.Empty);
-                }
-                break;
-                
-            case "reviews":
-                sb.Append("INSERT INTO reviews (review_id, user_id, business_id, stars, date, text, useful, funny, cool) VALUES ");
-                for (int i = 0; i < jsonBatch.Count; i++)
-                {
-                    if (i > 0) sb.Append(", ");
-                    sb.Append($"(@rid{i}, @uid{i}, @bid{i}, @stars{i}, @date{i}, @text{i}, @useful{i}, @funny{i}, @cool{i})");
-
-                    var jsonObject = System.Text.Json.JsonDocument.Parse(jsonBatch[i]).RootElement;
-                    
-                    cmd.Parameters.AddWithValue($"rid{i}", jsonObject.GetProperty("review_id").GetString() ?? string.Empty);
-                    cmd.Parameters.AddWithValue($"uid{i}", jsonObject.GetProperty("user_id").GetString() ?? string.Empty);
-                    cmd.Parameters.AddWithValue($"bid{i}", jsonObject.GetProperty("business_id").GetString() ?? string.Empty);
-                    cmd.Parameters.AddWithValue($"stars{i}", jsonObject.TryGetProperty("stars", out var stars) && stars.TryGetInt32(out var starsVal) ? starsVal : 0);
-                    cmd.Parameters.AddWithValue($"date{i}", jsonObject.GetProperty("date").GetString() ?? string.Empty);
-                    cmd.Parameters.AddWithValue($"text{i}", jsonObject.GetProperty("text").GetString() ?? string.Empty);
-                    cmd.Parameters.AddWithValue($"useful{i}", jsonObject.TryGetProperty("useful", out var useful) && useful.TryGetInt32(out var usefulVal) ? usefulVal : 0);
-                    cmd.Parameters.AddWithValue($"funny{i}", jsonObject.TryGetProperty("funny", out var funny) && funny.TryGetInt32(out var funnyVal) ? funnyVal : 0);
-                    cmd.Parameters.AddWithValue($"cool{i}", jsonObject.TryGetProperty("cool", out var cool) && cool.TryGetInt32(out var coolVal) ? coolVal : 0);
-                }
-                break;
-                
-            default:
-                sb.Append($"INSERT INTO {tableType} (data) VALUES ");
-                for (int i = 0; i < jsonBatch.Count; i++)
-                {
-                    if (i > 0) sb.Append(", ");
-                    sb.Append($"(@data{i}::jsonb)");
-                    cmd.Parameters.AddWithValue($"data{i}", jsonBatch[i]);
-                }
-                break;
-        }
-
-        cmd.CommandText = sb.ToString();
-
-        // Execute the batch insert
-        await cmd.ExecuteNonQueryAsync();
-
-        // Clear the parameters for the next batch
-        cmd.Parameters.Clear();
-    }
-
-    public async Task<List<Dictionary<string, object>>> ExecuteQueryAsync(string sql)
-    {
-        // Load the .env file
-        Env.Load();
-
-        // Get the database connection parameters
-        string? dbUsername = Environment.GetEnvironmentVariable("POSTGRES_USER");
-        string? dbPassword = Environment.GetEnvironmentVariable("POSTGRES_PASSWORD");
-        string? dbDatabase = Environment.GetEnvironmentVariable("POSTGRES_DB");
-
-        // Construct the connection string
-        var connectionString = $"Host=localhost;Username={dbUsername};Password={dbPassword};Database={dbDatabase}";
-
-        // Results list
-        var results = new List<Dictionary<string, object>>();
-
-        // Execute the query
-        using var conn = new NpgsqlConnection(connectionString);
-        await conn.OpenAsync();
-        
-        using var cmd = new NpgsqlCommand(sql, conn);
-        using var reader = await cmd.ExecuteReaderAsync();
-        
-        while (await reader.ReadAsync())
-        {
-            var row = new Dictionary<string, object>();
-            for (int i = 0; i < reader.FieldCount; i++)
-            {
-                var name = reader.GetName(i);
-                var value = reader.GetValue(i);
-                row[name] = value == DBNull.Value ? null : value;
-            }
-            results.Add(row);
-        }
-
-        Console.WriteLine($"Query executed. Returned {results.Count} rows.");
-        return results;
-    }
-
-    public async Task CreateTableAndInsertTestItemAsync()
-    {
-        // Load environment variables from the .env file
-        Env.Load();
-
-        // Get the database connection parameters from the environment variables
-        string? dbUsername = Environment.GetEnvironmentVariable("POSTGRES_USER");
-        string? dbPassword = Environment.GetEnvironmentVariable("POSTGRES_PASSWORD");
-        string? dbDatabase = Environment.GetEnvironmentVariable("POSTGRES_DB");
-
-        // Construct the connection string
-        var connectionString = $"Host=localhost;Username={dbUsername};Password={dbPassword};Database={dbDatabase}";
-
-        // Open a connection to the PostgreSQL database
-        using var conn = new NpgsqlConnection(connectionString);
-        await conn.OpenAsync();
-
-        // Create the tables (if they don't exist)
-        string createTablesSql = @"
-            CREATE TABLE IF NOT EXISTS users (
-                id serial PRIMARY KEY,
-                name text
-            );
-
-            CREATE TABLE IF NOT EXISTS addresses (
-                id serial PRIMARY KEY,
-                user_id integer REFERENCES users(id),  -- Foreign key to the users table
-                street text,
-                city text
-            );
+        // Drop existing tables if they exist
+        cmd.CommandText = @"
+            DROP TABLE IF EXISTS photo CASCADE;
+            DROP TABLE IF EXISTS tip CASCADE;
+            DROP TABLE IF EXISTS checkin CASCADE;
+            DROP TABLE IF EXISTS review CASCADE;
+            DROP TABLE IF EXISTS users CASCADE;
+            DROP TABLE IF EXISTS business CASCADE;
         ";
+        await cmd.ExecuteNonQueryAsync();
 
-        using (var cmd = new NpgsqlCommand(createTablesSql, conn))
-        {
-            await cmd.ExecuteNonQueryAsync();
-            Console.WriteLine("Tables created successfully or already exist.");
-        }
+        // Create tables
+        cmd.CommandText = @"
+            CREATE TABLE business (
+                business_id text PRIMARY KEY,
+                name text,
+                address text,
+                city text,
+                state text,
+                postal_code text,
+                latitude double precision,
+                longitude double precision,
+                stars double precision,
+                review_count int,
+                is_open int,
+                attributes jsonb,
+                categories text,
+                hours jsonb
+            );
 
-        // Insert a user into the 'users' table
-        string userName = "Alice";  // Example name
-        string insertUserSql = "INSERT INTO users (name) VALUES (@name) RETURNING id";
-        int userId;
+            CREATE TABLE IF NOT EXISTS ""users"" (
+                ""user_id"" text PRIMARY KEY,
+                ""name"" text,
+                ""review_count"" int,
+                ""yelping_since"" text,
+                ""friends"" text,
+                ""useful"" int,
+                ""funny"" int,
+                ""cool"" int,
+                ""fans"" int,
+                ""elite"" text,
+                ""average_stars"" double precision,
+                ""compliment_hot"" int,
+                ""compliment_more"" int,
+                ""compliment_profile"" int,
+                ""compliment_cute"" int,
+                ""compliment_list"" int,
+                ""compliment_note"" int,
+                ""compliment_plain"" int,
+                ""compliment_cool"" int,
+                ""compliment_funny"" int,
+                ""compliment_writer"" int,
+                ""compliment_photos"" int
+            );
 
-        using (var cmd = new NpgsqlCommand(insertUserSql, conn))
-        {
-            cmd.Parameters.AddWithValue("name", userName);
-            userId = (int)await cmd.ExecuteScalarAsync();
-            Console.WriteLine($"User inserted with ID: {userId}");
-        }
+            CREATE TABLE review (
+                review_id text PRIMARY KEY,
+                user_id text,
+                business_id text,
+                stars double precision,
+                date text,
+                text text,
+                useful int,
+                funny int,
+                cool int
+            );
 
-        // Insert an address into the 'addresses' table (normalized example)
-        string street = "123 Main St";
-        string city = "Sample City";
-        string insertAddressSql = "INSERT INTO addresses (user_id, street, city) VALUES (@user_id, @street, @city)";
+            CREATE TABLE checkin (
+                business_id text,
+                date text
+            );
 
-        using (var cmd = new NpgsqlCommand(insertAddressSql, conn))
-        {
-            cmd.Parameters.AddWithValue("user_id", userId);
-            cmd.Parameters.AddWithValue("street", street);
-            cmd.Parameters.AddWithValue("city", city);
-            await cmd.ExecuteNonQueryAsync();
-            Console.WriteLine("Address inserted successfully.");
-        }
+            CREATE TABLE tip (
+                text text,
+                date text,
+                compliment_count INT,
+                business_id text,
+                user_id text
+            );
+
+            CREATE TABLE photo (
+                photo_id VARCHAR(255) PRIMARY KEY,
+                business_id VARCHAR(255) NOT NULL,
+                caption TEXT NOT NULL,
+                label VARCHAR(255) NOT NULL,
+                FOREIGN KEY (business_id) REFERENCES business(business_id)
+            );
+
+            CREATE INDEX idx_businesses_categories ON business(categories);
+            CREATE INDEX idx_businesses_city ON business(city);
+            CREATE INDEX idx_businesses_stars ON business(stars);
+            CREATE INDEX idx_reviews_business_id ON review(business_id);
+            CREATE INDEX idx_reviews_user_id ON review(user_id);
+            CREATE INDEX idx_reviews_date ON review(date);
+            CREATE INDEX idx_users_name ON users(name);
+            CREATE INDEX idx_checkins_business_id ON checkin(business_id);
+            CREATE INDEX idx_tips_business_id ON tip(business_id);
+            CREATE INDEX idx_tips_user_id ON tip(user_id);
+            CREATE INDEX idx_tips_date ON tip(date);
+            CREATE INDEX idx_photos_business_id ON photo(business_id);
+        ";
+        await cmd.ExecuteNonQueryAsync();
     }
 
-    internal async Task InsertBusinessAsync(Business business)
+    public async Task InsertBusinessAsync(Business business)
     {
-        throw new NotImplementedException();
+        await using var conn = await _dataSource.OpenConnectionAsync();
+        await using var cmd = conn.CreateCommand();
+
+        cmd.CommandText = @"
+            INSERT INTO business (
+                business_id, name, address, city, state, postal_code,
+                latitude, longitude, stars, review_count, is_open,
+                attributes, categories, hours
+            )
+            VALUES (
+                @business_id, @name, @address, @city, @state, @postal_code,
+                @latitude, @longitude, @stars, @review_count, @is_open,
+                @attributes::jsonb, @categories, @hours::jsonb
+            )
+            ON CONFLICT (business_id)
+            DO UPDATE SET
+                name = EXCLUDED.name,
+                address = EXCLUDED.address,
+                city = EXCLUDED.city,
+                state = EXCLUDED.state,
+                postal_code = EXCLUDED.postal_code,
+                latitude = EXCLUDED.latitude,
+                longitude = EXCLUDED.longitude,
+                stars = EXCLUDED.stars,
+                review_count = EXCLUDED.review_count,
+                is_open = EXCLUDED.is_open,
+                attributes = EXCLUDED.attributes,
+                categories = EXCLUDED.categories,
+                hours = EXCLUDED.hours;";
+
+        cmd.Parameters.AddWithValue("business_id", business.BusinessId);
+        cmd.Parameters.AddWithValue("name", business.Name);
+        cmd.Parameters.AddWithValue("address", business.Address);
+        cmd.Parameters.AddWithValue("city", business.City);
+        cmd.Parameters.AddWithValue("state", business.State);
+        cmd.Parameters.AddWithValue("postal_code", business.PostalCode);
+        cmd.Parameters.AddWithValue("latitude", (object?)business.Latitude ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("longitude", (object?)business.Longitude ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("stars", (object?)business.Stars ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("review_count", (object?)business.ReviewCount ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("is_open", (object?)business.IsOpen ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("attributes", business.Attributes != null ? JsonSerializer.Serialize(business.Attributes) : DBNull.Value);
+        cmd.Parameters.AddWithValue("categories", (object?)business.Categories ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("hours", business.Hours != null ? JsonSerializer.Serialize(business.Hours) : DBNull.Value);
+
+        await cmd.ExecuteNonQueryAsync();
     }
 
-    internal async Task InsertCheckinAsync(Checkin checkin)
+    public async Task InsertReviewAsync(Review review)
     {
-        throw new NotImplementedException();
+        await using var conn = await _dataSource.OpenConnectionAsync();
+        await using var cmd = conn.CreateCommand();
+
+        cmd.CommandText = @"
+            INSERT INTO review (
+                review_id, user_id, business_id, stars, date,
+                text, useful, funny, cool
+            )
+            VALUES (
+                @review_id, @user_id, @business_id, @stars, @date,
+                @text, @useful, @funny, @cool
+            );";
+
+        cmd.Parameters.AddWithValue("review_id", review.ReviewId);
+        cmd.Parameters.AddWithValue("user_id", review.UserId);
+        cmd.Parameters.AddWithValue("business_id", review.BusinessId);
+        cmd.Parameters.AddWithValue("stars", review.Stars);
+        cmd.Parameters.AddWithValue("date", review.Date);
+        cmd.Parameters.AddWithValue("text", (object?)review.Text ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("useful", (object?)review.Useful ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("funny", (object?)review.Funny ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("cool", (object?)review.Cool ?? DBNull.Value);
+
+        await cmd.ExecuteNonQueryAsync();
     }
 
-    internal async Task InsertReviewAsync(Review review)
+    public async Task InsertUserAsync(User user)
     {
-        throw new NotImplementedException();
+        await using var conn = await _dataSource.OpenConnectionAsync();
+        await using var cmd = conn.CreateCommand();
+
+        cmd.CommandText = @"
+            INSERT INTO users (
+                user_id, name, review_count, yelping_since, friends,
+                useful, funny, cool, fans, elite, average_stars,
+                compliment_hot, compliment_more, compliment_profile,
+                compliment_cute, compliment_list, compliment_note,
+                compliment_plain, compliment_cool, compliment_funny,
+                compliment_writer, compliment_photos
+            )
+            VALUES (
+                @user_id, @name, @review_count, @yelping_since, @friends,
+                @useful, @funny, @cool, @fans, @elite, @average_stars,
+                @compliment_hot, @compliment_more, @compliment_profile,
+                @compliment_cute, @compliment_list, @compliment_note,
+                @compliment_plain, @compliment_cool, @compliment_funny,
+                @compliment_writer, @compliment_photos
+            );";
+
+        cmd.Parameters.AddWithValue("user_id", user.UserId);
+        cmd.Parameters.AddWithValue("name", user.Name);
+        cmd.Parameters.AddWithValue("review_count", (object?)user.ReviewCount ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("yelping_since", (object?)user.YelpingSince ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("friends", (object?)user.Friends ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("useful", (object?)user.Useful ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("funny", (object?)user.Funny ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("cool", (object?)user.Cool ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("fans", (object?)user.Fans ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("elite", (object?)user.Elite ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("average_stars", (object?)user.AverageStars ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("compliment_hot", (object?)user.ComplimentHot ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("compliment_more", (object?)user.ComplimentMore ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("compliment_profile", (object?)user.ComplimentProfile ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("compliment_cute", (object?)user.ComplimentCute ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("compliment_list", (object?)user.ComplimentList ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("compliment_note", (object?)user.ComplimentNote ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("compliment_plain", (object?)user.ComplimentPlain ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("compliment_cool", (object?)user.ComplimentCool ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("compliment_funny", (object?)user.ComplimentFunny ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("compliment_writer", (object?)user.ComplimentWriter ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("compliment_photos", (object?)user.ComplimentPhotos ?? DBNull.Value);
+
+        await cmd.ExecuteNonQueryAsync();
     }
 
-    internal async Task InsertTipAsync(Tip tip)
+    public async Task InsertCheckinAsync(Checkin checkin)
     {
-        throw new NotImplementedException();
+        await using var conn = await _dataSource.OpenConnectionAsync();
+        await using var cmd = conn.CreateCommand();
+
+        cmd.CommandText = @"
+            INSERT INTO checkin (business_id, date)
+            VALUES (@business_id, @date);";
+
+        cmd.Parameters.AddWithValue("business_id", checkin.BusinessId);
+        cmd.Parameters.AddWithValue("date", checkin.Date);
+
+        await cmd.ExecuteNonQueryAsync();
     }
 
-    internal async Task InsertUserAsync(User user)
+    public async Task InsertTipAsync(Tip tip)
     {
-        throw new NotImplementedException();
+        await using var conn = await _dataSource.OpenConnectionAsync();
+        await using var cmd = conn.CreateCommand();
+
+        cmd.CommandText = @"
+            INSERT INTO tip (
+                business_id, user_id, date, text, compliment_count
+            )
+            VALUES (
+                @business_id, @user_id, @date, @text, @compliment_count
+            );";
+
+        cmd.Parameters.AddWithValue("business_id", tip.BusinessId);
+        cmd.Parameters.AddWithValue("user_id", tip.UserId);
+        cmd.Parameters.AddWithValue("date", tip.Date);
+        cmd.Parameters.AddWithValue("text", tip.Text);
+        cmd.Parameters.AddWithValue("compliment_count", tip.ComplimentCount);
+
+        await cmd.ExecuteNonQueryAsync();
     }
 
-    internal async Task InsertPhotoAsync(Photo photo)
+    public async Task InsertPhotoAsync(Photo photo)
     {
-        throw new NotImplementedException();
+        await using var conn = await _dataSource.OpenConnectionAsync();
+        await using var cmd = conn.CreateCommand();
+
+        cmd.CommandText = @"
+            INSERT INTO photo (
+                photo_id, business_id, caption, label
+            )
+            VALUES (
+                @photo_id, @business_id, @caption, @label
+            );";
+
+        cmd.Parameters.AddWithValue("photo_id", photo.PhotoId);
+        cmd.Parameters.AddWithValue("business_id", photo.BusinessId);
+        cmd.Parameters.AddWithValue("caption", photo.Caption);
+        cmd.Parameters.AddWithValue("label", photo.Label);
+
+        await cmd.ExecuteNonQueryAsync();
+    }
+
+    public void Dispose()
+    {
+        _dataSource?.Dispose();
     }
 }

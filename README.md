@@ -47,3 +47,11 @@ The project includes tools for benchmarking:
 - Geographic queries (MongoDB)
 
 To run the benchmarks, uncomment the `await RunBenchmarksAsync(mongoHelper);` line in Program.cs.
+
+## Check what is in postgres database
+`
+psql -h localhost -p 5433 -U myuser -d postgres_yelp
+`
+
+to see tables: `\dt`
+To see what is inside tables: `SELECT * FROM businesses limit 5;`
