@@ -32,10 +32,6 @@ public static class ConcurrentBenchmarkHelper{
 
         stopwatch.Stop();
 
-        Console.WriteLine("converting bag to list");
-        var lst = latencies.ToList();
-
-        Console.WriteLine("did it");
         return (stopwatch.Elapsed.TotalSeconds, latencies.ToList());
     }
 }
