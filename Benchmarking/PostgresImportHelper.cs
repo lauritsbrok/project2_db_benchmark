@@ -10,7 +10,7 @@ namespace project2_db_benchmark.Benchmarking
     public class PostgresImportHelper()
     {
         private readonly PostgresDatabaseHelper _postgresHelper = new();
-        public async Task<(double, double, List<double>)> LoadAndInsert()
+        public async Task<(double, double, List<double>)> LoadAndInsert(int concurrencyLevel = 8)
         {
             IEnumerable<Business> businesses = await Parser.Parse<Business>($"yelp_dataset/{Globals.BUSINESS_JSON_FILE_NAME}");
             IEnumerable<Checkin> checkins = await Parser.Parse<Checkin>($"yelp_dataset/{Globals.CHECKIN_JSON_FILE_NAME}");
@@ -28,12 +28,12 @@ namespace project2_db_benchmark.Benchmarking
             inserts.AddRange(users.Select<User, Func<Task>>(u => () => _postgresHelper.InsertUserAsync(u)));
             inserts.AddRange(photos.Select<Photo, Func<Task>>(u => () => _postgresHelper.InsertPhotoAsync(u)));
 
-            var (totalTime, latencies) = await ConcurrentBenchmarkHelper.RunTasks(inserts);
+            var (totalTime, latencies) = await ConcurrentBenchmarkHelper.RunTasks(inserts, concurrencyLevel);
 
             int totalRecords = businesses.Count() + checkins.Count() + reviews.Count() + tips.Count() + users.Count();
             double throughput = totalRecords / totalTime;
 
-            return (totalTime, throughput, latencies); ;
+            return (totalTime, throughput, latencies);
         }
     }
 }

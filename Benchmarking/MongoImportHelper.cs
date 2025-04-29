@@ -9,7 +9,7 @@ namespace project2_db_benchmark.Benchmarking
     {
         private readonly MongoDatabaseHelper _mongoHelper = new();
 
-        public async Task<(double, double, List<double>)> LoadAndInsert()
+        public async Task<(double, double, List<double>)> LoadAndInsert(int concurrencyLevel = 8)
         {
             IEnumerable<Business> businesses = await Parser.Parse<Business>($"yelp_dataset/{Globals.BUSINESS_JSON_FILE_NAME}");
             IEnumerable<Photo> photos = await Parser.Parse<Photo>($"yelp_dataset/{Globals.PHOTO_JSON_FILE_NAME}");
@@ -27,7 +27,7 @@ namespace project2_db_benchmark.Benchmarking
             inserts.AddRange(tips.Select<Tip, Func<Task>>(t => () => _mongoHelper.InsertTipAsync(t)));
             inserts.AddRange(users.Select<User, Func<Task>>(u => () => _mongoHelper.InsertUserAsync(u)));
 
-            var (totalTime, latencies) = await ConcurrentBenchmarkHelper.RunTasks(inserts);
+            var (totalTime, latencies) = await ConcurrentBenchmarkHelper.RunTasks(inserts, concurrencyLevel);
 
             int totalRecords = businesses.Count() + checkins.Count() + reviews.Count() + tips.Count() + users.Count();
             double throughput = totalRecords / totalTime;
