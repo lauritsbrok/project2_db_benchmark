@@ -7,10 +7,10 @@ namespace project2_db_benchmark.Models.Shared
     public class User
     {
         [JsonPropertyName("user_id")]
-        required public string UserId { get; set; }
+        public string UserId { get; set; }
 
         [JsonPropertyName("name")]
-        required public string Name { get; set; }
+        public string Name { get; set; }
 
         [JsonPropertyName("review_count")]
         public int? ReviewCount { get; set; }

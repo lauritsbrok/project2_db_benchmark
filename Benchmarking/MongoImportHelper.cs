@@ -9,7 +9,8 @@ namespace project2_db_benchmark.Benchmarking
     {
         private readonly MongoDatabaseHelper _mongoHelper = new();
 
-        private async Task<double> LoadAndInsert(){
+        public async Task<double> LoadAndInsert()
+        {
             IEnumerable<Business> businesses = await Parser.Parse<Business>($"yelp_dataset/{Globals.BUSINESS_JSON_FILE_NAME}");
             IEnumerable<Photo> photos = await Parser.Parse<Photo>($"yelp_dataset/{Globals.PHOTO_JSON_FILE_NAME}");
             businesses = Business.AttachPhotosToBusinesses(businesses, photos);
@@ -29,13 +30,8 @@ namespace project2_db_benchmark.Benchmarking
             var result = await ConcurrentBenchmarkHelper.RunTasks(inserts);
 
             _mongoHelper.DeleteDatabase();
-            
+
             return result;
         }
-
-
-        public async Task<double> BenchmarkInsert(){
-            return await LoadAndInsert();
-        }
     }
-} 
+}
