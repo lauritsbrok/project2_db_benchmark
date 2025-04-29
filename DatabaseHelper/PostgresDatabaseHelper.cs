@@ -2,23 +2,17 @@ using System;
 using Npgsql;
 using DotNetEnv;
 using System.Text;
+using project2_db_benchmark.Models.Postgres;
+using project2_db_benchmark.Models.Shared;
 
-namespace project2_db_benchmark.postgres;
+namespace project2_db_benchmark.DatabaseHelper;
 
 public class PostgresDatabaseHelper
 {
     public async Task InsertJsonFromFileInChunksAsync(string filePath, int chunkSize = 1000, string tableType = "tip")
     {
-        // Load the .env file
-        Env.Load();
-
-        // Get the values from the .env file
-        string? dbUsername = Environment.GetEnvironmentVariable("POSTGRES_USER");
-        string? dbPassword = Environment.GetEnvironmentVariable("POSTGRES_PASSWORD");
-        string? dbDatabase = Environment.GetEnvironmentVariable("POSTGRES_DB");
-
         // Construct the connection string
-        var connectionString = $"Host=localhost;Username={dbUsername};Password={dbPassword};Database={dbDatabase}";
+        var connectionString = $"Host=localhost;Username={Globals.POSTGRES_USER};Password={Globals.POSTGRES_USER};Database={Globals.POSTGRES_DB}";
 
         // Open a connection to the PostgreSQL database
         using var conn = new NpgsqlConnection(connectionString);
@@ -308,5 +302,35 @@ public class PostgresDatabaseHelper
             await cmd.ExecuteNonQueryAsync();
             Console.WriteLine("Address inserted successfully.");
         }
+    }
+
+    internal async Task InsertBusinessAsync(Business business)
+    {
+        throw new NotImplementedException();
+    }
+
+    internal async Task InsertCheckinAsync(Checkin checkin)
+    {
+        throw new NotImplementedException();
+    }
+
+    internal async Task InsertReviewAsync(Review review)
+    {
+        throw new NotImplementedException();
+    }
+
+    internal async Task InsertTipAsync(Tip tip)
+    {
+        throw new NotImplementedException();
+    }
+
+    internal async Task InsertUserAsync(User user)
+    {
+        throw new NotImplementedException();
+    }
+
+    internal async Task InsertPhotoAsync(Photo photo)
+    {
+        throw new NotImplementedException();
     }
 }
