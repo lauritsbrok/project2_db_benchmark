@@ -17,7 +17,7 @@ namespace project2_db_benchmark.Benchmarking
             IEnumerable<Checkin> checkins = await Parser.Parse<Checkin>($"yelp_dataset/{Globals.CHECKIN_JSON_FILE_NAME}");
             IEnumerable<Review> reviews = await Parser.Parse<Review>($"yelp_dataset/{Globals.REVIEW_JSON_FILE_NAME}");
             IEnumerable<Tip> tips = await Parser.Parse<Tip>($"yelp_dataset/{Globals.TIP_JSON_FILE_NAME}");
-            IEnumerable<User> users = await Parser.Parse<User>($"yelp_dataset/{Globals.TIP_JSON_FILE_NAME}");
+            IEnumerable<User> users = await Parser.Parse<User>($"yelp_dataset/{Globals.USER_JSON_FILE_NAME}");
 
             var inserts = new List<Func<Task>>();
 
