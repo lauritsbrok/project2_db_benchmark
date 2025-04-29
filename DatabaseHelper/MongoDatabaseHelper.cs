@@ -119,5 +119,60 @@ namespace project2_db_benchmark.DatabaseHelper
         {
             _client.DropDatabase(Globals.MANGO_DB_NAME);
         }
+
+        public async Task<List<Tip>> GetTipsByBusinessIdAsync(string businessId)
+        {
+            var filter = Builders<Tip>.Filter.Eq(t => t.BusinessId, businessId);
+            return await _tips.Find(filter).ToListAsync();
+        }
+
+        public async Task<Business> GetBusinessByIdAsync(string businessId)
+        {
+            var filter = Builders<Business>.Filter.Eq(b => b.BusinessId, businessId);
+            return await _businesses.Find(filter).FirstOrDefaultAsync();
+        }
+
+        public async Task<List<Review>> GetReviewsByIdAsync(string reviewId)
+        {
+            var filter = Builders<Review>.Filter.Eq(r => r.ReviewId, reviewId);
+            return await _reviews.Find(filter).ToListAsync();
+        }
+
+        public async Task<User> GetUserByIdAsync(string userId)
+        {
+            var filter = Builders<User>.Filter.Eq(u => u.UserId, userId);
+            return await _users.Find(filter).FirstOrDefaultAsync();
+        }
+
+        public async Task<List<Checkin>> GetCheckinsByBusinessIdAsync(string businessId)
+        {
+            var filter = Builders<Checkin>.Filter.Eq(c => c.BusinessId, businessId);
+            return await _checkins.Find(filter).ToListAsync();
+        }
+
+        public async Task<List<Business>> GetAllBusinessesAsync()
+        {
+            return await _businesses.Find(_ => true).ToListAsync();
+        }
+
+        public async Task<List<Review>> GetAllReviewsAsync()
+        {
+            return await _reviews.Find(_ => true).ToListAsync();
+        }
+
+        public async Task<List<User>> GetAllUsersAsync()
+        {
+            return await _users.Find(_ => true).ToListAsync();
+        }
+
+        public async Task<List<Checkin>> GetAllCheckinsAsync()
+        {
+            return await _checkins.Find(_ => true).ToListAsync();
+        }
+
+        public async Task<List<Tip>> GetAllTipsAsync()
+        {
+            return await _tips.Find(_ => true).ToListAsync();
+        }
     }
 } 

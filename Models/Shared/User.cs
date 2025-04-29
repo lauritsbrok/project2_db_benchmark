@@ -1,9 +1,11 @@
 using System.Text.Json.Serialization;
+using MongoDB.Bson.Serialization.Attributes;
 
 #pragma warning disable CS8618
 
 namespace project2_db_benchmark.Models.Shared
 {
+    [BsonIgnoreExtraElements]
     public class User
     {
         [JsonPropertyName("user_id")]

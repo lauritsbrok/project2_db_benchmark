@@ -8,6 +8,7 @@ using project2_db_benchmark.Models.Shared;
 
 namespace project2_db_benchmark.Models.MongoDB
 {
+    [BsonIgnoreExtraElements]
     public class Business
     {
         [JsonPropertyName("business_id")]
