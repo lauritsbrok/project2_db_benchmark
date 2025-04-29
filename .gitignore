@@ -401,5 +401,6 @@ FodyWeavers.xsd
 
 .DS_Store
 yelp_dataset
+Samples
 .env
 .vscode
