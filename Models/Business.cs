@@ -2,11 +2,11 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
-using project2_db_benchmark.Models.Shared;
 
 #pragma warning disable CS8618
 
-namespace project2_db_benchmark.Models.MongoDB
+
+namespace project2_db_benchmark.Models
 {
     [BsonIgnoreExtraElements]
     public class Business
@@ -30,31 +30,34 @@ namespace project2_db_benchmark.Models.MongoDB
         public string PostalCode { get; set; }
 
         [JsonPropertyName("latitude")]
-        public double Latitude { get; set; }
+        public double? Latitude { get; set; }
 
         [JsonPropertyName("longitude")]
-        public double Longitude { get; set; }
+        public double? Longitude { get; set; }
 
         [JsonPropertyName("stars")]
-        public double Stars { get; set; }
+        public double? Stars { get; set; }
 
         [JsonPropertyName("review_count")]
-        public int ReviewCount { get; set; }
+        public int? ReviewCount { get; set; }
 
         [JsonPropertyName("is_open")]
-        public int IsOpen { get; set; }
+        public int? IsOpen { get; set; }
 
+        // The JsonElement that comes from JSON deserialization
         [JsonPropertyName("attributes")]
-        [BsonIgnore] // ignore this raw JsonElement in Mongo
         public JsonElement RawAttributes { get; set; }
 
+        // MongoDB specific handling of attributes
         [BsonElement("attributes")]
         [BsonIgnoreIfNull]
+        [JsonIgnore]
         public object Attributes
         {
             get
             {
-                if (BsonDocument.TryParse(RawAttributes.GetRawText(), out var bsonDoc))
+                if (RawAttributes.ValueKind != JsonValueKind.Undefined && 
+                    BsonDocument.TryParse(RawAttributes.GetRawText(), out var bsonDoc))
                 {
                     return bsonDoc;
                 }
@@ -69,28 +72,16 @@ namespace project2_db_benchmark.Models.MongoDB
             }
         }
 
+        // Postgres specific attribute handling
+        [JsonIgnore]
+        public Dictionary<string, object>? PostgresAttributes { get; set; }
+
         [JsonPropertyName("categories")]
         public string Categories { get; set; }
 
         [JsonPropertyName("hours")]
         public Dictionary<string, string> Hours { get; set; }
-        // [JsonIgnore]
-        // public IEnumerable<Photo> Photos { get; set; }
-        // public static IEnumerable<Business> AttachPhotosToBusinesses(IEnumerable<Business> businesses, IEnumerable<Photo> photos)
-        // {
-        //     var photoLookup = photos
-        //         .GroupBy(p => p.BusinessId)
-        //         .ToDictionary(g => g.Key, g => g.ToList());
-
-        //     foreach (var business in businesses)
-        //     {
-        //         photoLookup.TryGetValue(business.BusinessId, out var matchedPhotos);
-        //         business.Photos = matchedPhotos ?? [];
-        //     }
-
-        //     return businesses;
-        // }
     }
 }
 
-#pragma warning restore CS8618
+#pragma warning restore CS8618 

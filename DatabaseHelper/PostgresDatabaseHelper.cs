@@ -2,10 +2,11 @@ using System;
 using System.Text.Json;
 using Npgsql;
 using NpgsqlTypes;
-using project2_db_benchmark.Models.Postgres;
-using project2_db_benchmark.Models.Shared;
+using project2_db_benchmark.Models;
 
 namespace project2_db_benchmark.DatabaseHelper;
+
+#pragma warning disable CS8601, CS8603
 
 public class PostgresDatabaseHelper : IDisposable
 {
@@ -173,7 +174,8 @@ public class PostgresDatabaseHelper : IDisposable
         cmd.Parameters.AddWithValue("stars", (object?)business.Stars ?? DBNull.Value);
         cmd.Parameters.AddWithValue("review_count", (object?)business.ReviewCount ?? DBNull.Value);
         cmd.Parameters.AddWithValue("is_open", (object?)business.IsOpen ?? DBNull.Value);
-        cmd.Parameters.AddWithValue("attributes", business.Attributes != null ? JsonSerializer.Serialize(business.Attributes) : DBNull.Value);
+        cmd.Parameters.AddWithValue("attributes", business.RawAttributes.ValueKind != System.Text.Json.JsonValueKind.Undefined ? 
+                                    business.RawAttributes.GetRawText() : DBNull.Value);
         cmd.Parameters.AddWithValue("categories", (object?)business.Categories ?? DBNull.Value);
         cmd.Parameters.AddWithValue("hours", business.Hours != null ? JsonSerializer.Serialize(business.Hours) : DBNull.Value);
 
@@ -363,7 +365,7 @@ public class PostgresDatabaseHelper : IDisposable
 
         if (await reader.ReadAsync())
         {
-            return new Business
+            var business = new Business
             {
                 BusinessId = reader.GetString(0),
                 Name = reader.GetString(1),
@@ -376,9 +378,24 @@ public class PostgresDatabaseHelper : IDisposable
                 Stars = !reader.IsDBNull(8) ? reader.GetDouble(8) : null,
                 ReviewCount = !reader.IsDBNull(9) ? reader.GetInt32(9) : null,
                 IsOpen = !reader.IsDBNull(10) ? reader.GetInt32(10) : null,
-                // JSON attributes handled as string here for simplicity
                 Categories = !reader.IsDBNull(12) ? reader.GetString(12) : null
             };
+
+            // Handle attributes JSON
+            if (!reader.IsDBNull(11))
+            {
+                string attributesJson = reader.GetString(11);
+                business.RawAttributes = JsonDocument.Parse(attributesJson).RootElement;
+            }
+
+            // Handle hours
+            if (!reader.IsDBNull(13))
+            {
+                string hoursJson = reader.GetString(13);
+                business.Hours = JsonSerializer.Deserialize<Dictionary<string, string>>(hoursJson);
+            }
+
+            return business;
         }
 
         return null;
@@ -518,7 +535,7 @@ public class PostgresDatabaseHelper : IDisposable
 
         while (await reader.ReadAsync())
         {
-            businesses.Add(new Business
+            var business = new Business
             {
                 BusinessId = reader.GetString(0),
                 Name = reader.GetString(1),
@@ -532,7 +549,23 @@ public class PostgresDatabaseHelper : IDisposable
                 ReviewCount = !reader.IsDBNull(9) ? reader.GetInt32(9) : null,
                 IsOpen = !reader.IsDBNull(10) ? reader.GetInt32(10) : null,
                 Categories = !reader.IsDBNull(12) ? reader.GetString(12) : null
-            });
+            };
+
+            // Handle attributes JSON
+            if (!reader.IsDBNull(11))
+            {
+                string attributesJson = reader.GetString(11);
+                business.RawAttributes = JsonDocument.Parse(attributesJson).RootElement;
+            }
+
+            // Handle hours
+            if (!reader.IsDBNull(13))
+            {
+                string hoursJson = reader.GetString(13);
+                business.Hours = JsonSerializer.Deserialize<Dictionary<string, string>>(hoursJson);
+            }
+
+            businesses.Add(business);
         }
 
         return businesses;
@@ -698,7 +731,7 @@ public class PostgresDatabaseHelper : IDisposable
 
         while (await reader.ReadAsync())
         {
-            businesses.Add(new Business
+            var business = new Business
             {
                 BusinessId = reader.GetString(0),
                 Name = reader.GetString(1),
@@ -712,7 +745,23 @@ public class PostgresDatabaseHelper : IDisposable
                 ReviewCount = !reader.IsDBNull(9) ? reader.GetInt32(9) : null,
                 IsOpen = !reader.IsDBNull(10) ? reader.GetInt32(10) : null,
                 Categories = !reader.IsDBNull(12) ? reader.GetString(12) : null
-            });
+            };
+
+            // Handle attributes JSON
+            if (!reader.IsDBNull(11))
+            {
+                string attributesJson = reader.GetString(11);
+                business.RawAttributes = JsonDocument.Parse(attributesJson).RootElement;
+            }
+
+            // Handle hours
+            if (!reader.IsDBNull(13))
+            {
+                string hoursJson = reader.GetString(13);
+                business.Hours = JsonSerializer.Deserialize<Dictionary<string, string>>(hoursJson);
+            }
+
+            businesses.Add(business);
         }
 
         return businesses;
@@ -747,8 +796,231 @@ public class PostgresDatabaseHelper : IDisposable
         return photos;
     }
 
+    public async Task<List<Business>> SearchRestaurantsByNamePrefixAsync(string namePrefix, int limit = 10)
+    {
+        await using var conn = await _dataSource.OpenConnectionAsync();
+        await using var cmd = conn.CreateCommand();
+
+        cmd.CommandText = @"
+            SELECT * FROM business
+            WHERE name LIKE @name_prefix 
+            AND categories LIKE '%Restaurant%'
+            LIMIT @limit";
+
+        cmd.Parameters.AddWithValue("name_prefix", $"{namePrefix}%");
+        cmd.Parameters.AddWithValue("limit", limit);
+
+        var businesses = new List<Business>();
+        await using var reader = await cmd.ExecuteReaderAsync();
+
+        while (await reader.ReadAsync())
+        {
+            var business = new Business
+            {
+                BusinessId = reader.GetString(0),
+                Name = reader.GetString(1),
+                Address = !reader.IsDBNull(2) ? reader.GetString(2) : null,
+                City = !reader.IsDBNull(3) ? reader.GetString(3) : null,
+                State = !reader.IsDBNull(4) ? reader.GetString(4) : null,
+                PostalCode = !reader.IsDBNull(5) ? reader.GetString(5) : null,
+                Latitude = !reader.IsDBNull(6) ? reader.GetDouble(6) : null,
+                Longitude = !reader.IsDBNull(7) ? reader.GetDouble(7) : null,
+                Stars = !reader.IsDBNull(8) ? reader.GetDouble(8) : null,
+                ReviewCount = !reader.IsDBNull(9) ? reader.GetInt32(9) : null,
+                IsOpen = !reader.IsDBNull(10) ? reader.GetInt32(10) : null,
+                Categories = !reader.IsDBNull(12) ? reader.GetString(12) : null
+            };
+
+            // Handle attributes JSON
+            if (!reader.IsDBNull(11))
+            {
+                string attributesJson = reader.GetString(11);
+                business.RawAttributes = JsonDocument.Parse(attributesJson).RootElement;
+            }
+
+            // Handle hours
+            if (!reader.IsDBNull(13))
+            {
+                string hoursJson = reader.GetString(13);
+                business.Hours = JsonSerializer.Deserialize<Dictionary<string, string>>(hoursJson);
+            }
+
+            businesses.Add(business);
+        }
+
+        return businesses;
+    }
+
+    public async Task<List<Review>> GetMostRecentReviewsByBusinessIdAsync(string businessId, int limit = 10)
+    {
+        await using var conn = await _dataSource.OpenConnectionAsync();
+        await using var cmd = conn.CreateCommand();
+
+        cmd.CommandText = @"
+            SELECT review_id, user_id, business_id, stars, date,
+                   text, useful, funny, cool
+            FROM review
+            WHERE business_id = @business_id
+            ORDER BY date DESC
+            LIMIT @limit";
+
+        cmd.Parameters.AddWithValue("business_id", businessId);
+        cmd.Parameters.AddWithValue("limit", limit);
+
+        var reviews = new List<Review>();
+        await using var reader = await cmd.ExecuteReaderAsync();
+
+        while (await reader.ReadAsync())
+        {
+            reviews.Add(new Review
+            {
+                ReviewId = reader.GetString(0),
+                UserId = reader.GetString(1),
+                BusinessId = reader.GetString(2),
+                Stars = reader.GetDouble(3),
+                Date = reader.GetString(4),
+                Text = !reader.IsDBNull(5) ? reader.GetString(5) : null,
+                Useful = !reader.IsDBNull(6) ? reader.GetInt32(6) : null,
+                Funny = !reader.IsDBNull(7) ? reader.GetInt32(7) : null,
+                Cool = !reader.IsDBNull(8) ? reader.GetInt32(8) : null
+            });
+        }
+
+        return reviews;
+    }
+    
+    public async Task<List<User>> GetUsersByReviewIdsAsync(List<string> userIds)
+    {
+        if (userIds == null || userIds.Count == 0)
+            return new List<User>();
+
+        await using var conn = await _dataSource.OpenConnectionAsync();
+        await using var cmd = conn.CreateCommand();
+
+        // Create a comma-separated list of quoted user IDs for the IN clause
+        string userIdList = string.Join(",", userIds.Select(id => $"'{id}'"));
+
+        cmd.CommandText = $@"
+            SELECT user_id, name, review_count, yelping_since, friends,
+                   useful, funny, cool, fans, elite, average_stars,
+                   compliment_hot, compliment_more, compliment_profile,
+                   compliment_cute, compliment_list, compliment_note,
+                   compliment_plain, compliment_cool, compliment_funny,
+                   compliment_writer, compliment_photos
+            FROM users
+            WHERE user_id IN ({userIdList})";
+
+        var users = new List<User>();
+        await using var reader = await cmd.ExecuteReaderAsync();
+
+        while (await reader.ReadAsync())
+        {
+            users.Add(new User
+            {
+                UserId = reader.GetString(0),
+                Name = reader.GetString(1),
+                ReviewCount = !reader.IsDBNull(2) ? reader.GetInt32(2) : null,
+                YelpingSince = !reader.IsDBNull(3) ? reader.GetString(3) : null,
+                Friends = !reader.IsDBNull(4) ? reader.GetString(4) : null,
+                Useful = !reader.IsDBNull(5) ? reader.GetInt32(5) : null,
+                Funny = !reader.IsDBNull(6) ? reader.GetInt32(6) : null,
+                Cool = !reader.IsDBNull(7) ? reader.GetInt32(7) : null,
+                Fans = !reader.IsDBNull(8) ? reader.GetInt32(8) : null,
+                Elite = !reader.IsDBNull(9) ? reader.GetString(9) : null,
+                AverageStars = !reader.IsDBNull(10) ? reader.GetDouble(10) : null,
+                ComplimentHot = !reader.IsDBNull(11) ? reader.GetInt32(11) : null,
+                ComplimentMore = !reader.IsDBNull(12) ? reader.GetInt32(12) : null,
+                ComplimentProfile = !reader.IsDBNull(13) ? reader.GetInt32(13) : null,
+                ComplimentCute = !reader.IsDBNull(14) ? reader.GetInt32(14) : null,
+                ComplimentList = !reader.IsDBNull(15) ? reader.GetInt32(15) : null,
+                ComplimentNote = !reader.IsDBNull(16) ? reader.GetInt32(16) : null,
+                ComplimentPlain = !reader.IsDBNull(17) ? reader.GetInt32(17) : null,
+                ComplimentCool = !reader.IsDBNull(18) ? reader.GetInt32(18) : null,
+                ComplimentFunny = !reader.IsDBNull(19) ? reader.GetInt32(19) : null,
+                ComplimentWriter = !reader.IsDBNull(20) ? reader.GetInt32(20) : null,
+                ComplimentPhotos = !reader.IsDBNull(21) ? reader.GetInt32(21) : null
+            });
+        }
+
+        return users;
+    }
+    
+    public async Task<List<Review>> GetReviewsByBusinessIdSortedByStarsAsync(string businessId, double targetStars = 3.0)
+    {
+        await using var conn = await _dataSource.OpenConnectionAsync();
+        await using var cmd = conn.CreateCommand();
+
+        cmd.CommandText = @"
+            SELECT review_id, user_id, business_id, stars, date,
+                   text, useful, funny, cool
+            FROM review
+            WHERE business_id = @business_id
+            ORDER BY ABS(stars - @target_stars) ASC";
+
+        cmd.Parameters.AddWithValue("business_id", businessId);
+        cmd.Parameters.AddWithValue("target_stars", targetStars);
+
+        var reviews = new List<Review>();
+        await using var reader = await cmd.ExecuteReaderAsync();
+
+        while (await reader.ReadAsync())
+        {
+            reviews.Add(new Review
+            {
+                ReviewId = reader.GetString(0),
+                UserId = reader.GetString(1),
+                BusinessId = reader.GetString(2),
+                Stars = reader.GetDouble(3),
+                Date = reader.GetString(4),
+                Text = !reader.IsDBNull(5) ? reader.GetString(5) : null,
+                Useful = !reader.IsDBNull(6) ? reader.GetInt32(6) : null,
+                Funny = !reader.IsDBNull(7) ? reader.GetInt32(7) : null,
+                Cool = !reader.IsDBNull(8) ? reader.GetInt32(8) : null
+            });
+        }
+
+        return reviews;
+    }
+    
+    public async Task<List<Review>> GetReviewsByBusinessIdAsync(string businessId)
+    {
+        await using var conn = await _dataSource.OpenConnectionAsync();
+        await using var cmd = conn.CreateCommand();
+
+        cmd.CommandText = @"
+            SELECT review_id, user_id, business_id, stars, date,
+                   text, useful, funny, cool
+            FROM review
+            WHERE business_id = @business_id";
+
+        cmd.Parameters.AddWithValue("business_id", businessId);
+
+        var reviews = new List<Review>();
+        await using var reader = await cmd.ExecuteReaderAsync();
+
+        while (await reader.ReadAsync())
+        {
+            reviews.Add(new Review
+            {
+                ReviewId = reader.GetString(0),
+                UserId = reader.GetString(1),
+                BusinessId = reader.GetString(2),
+                Stars = reader.GetDouble(3),
+                Date = reader.GetString(4),
+                Text = !reader.IsDBNull(5) ? reader.GetString(5) : null,
+                Useful = !reader.IsDBNull(6) ? reader.GetInt32(6) : null,
+                Funny = !reader.IsDBNull(7) ? reader.GetInt32(7) : null,
+                Cool = !reader.IsDBNull(8) ? reader.GetInt32(8) : null
+            });
+        }
+
+        return reviews;
+    }
+
     public void Dispose()
     {
         _dataSource?.Dispose();
     }
 }
+
+#pragma warning restore CS8601, CS8603

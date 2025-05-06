@@ -1,8 +1,7 @@
 using System.Diagnostics;
 using project2_db_benchmark.DatabaseHelper;
 using project2_db_benchmark.Generator;
-using project2_db_benchmark.Models.Shared;
-using project2_db_benchmark.Models.MongoDB;
+using project2_db_benchmark.Models;
 using project2_db_benchmark.Helpers;
 using MongoDB.Driver;
 
@@ -63,70 +62,73 @@ public class InstructionExecutor
     {
         switch (instruction.Type)
         {
-            case InstructionType.CreateUser:
-                var newUser = new User
+            case InstructionType.SearchForRestaurants:
+                // 1. Search for restaurants by name prefix
+                string namePrefix = instruction.Parameters["name_prefix"];
+                var matchedRestaurants = await _mongoHelper.SearchRestaurantsByNamePrefixAsync(namePrefix, 10);
+                
+                if (matchedRestaurants.Count > 0)
+                {
+                    // 2. For the first 3 matched restaurants (or fewer if less than 3 returned)
+                    for (int i = 0; i < Math.Min(3, matchedRestaurants.Count); i++)
+                    {
+                        var restaurant = matchedRestaurants[i];
+                        
+                        // 3. Fetch images for the restaurant
+                        var restaurantPhotos = await _mongoHelper.GetPhotosByBusinessIdAsync(restaurant.BusinessId);
+                        
+                        // 4. Fetch 10 most recent reviews
+                        var recentReviews = await _mongoHelper.GetMostRecentReviewsByBusinessIdAsync(restaurant.BusinessId, 10);
+                        
+                        // 5. Get users who wrote those reviews
+                        var userIds = recentReviews.Select(r => r.UserId).Distinct().ToList();
+                        var reviewUsers = await _mongoHelper.GetUsersByReviewIdsAsync(userIds);
+                        
+                        // 6. Sort reviews by proximity to 3-star ratings
+                        var sortedReviews = await _mongoHelper.GetReviewsByBusinessIdSortedByStarsAsync(restaurant.BusinessId, 3.0);
+                    }
+                }
+                break;
+
+            case InstructionType.SubmitReviews:
+                // 1. Create a new user
+                var submitUser = new User
                 {
                     UserId = Guid.NewGuid().ToString(),
-                    Name = instruction.Parameters["name"],
+                    Name = instruction.Parameters["user_name"],
                     ReviewCount = 0,
                     YelpingSince = DateTime.UtcNow.ToString("yyyy-MM-dd")
                 };
-                await _mongoHelper.InsertUserAsync(newUser);
-                break;
-
-            case InstructionType.SearchBusiness:
-                string category = instruction.Parameters["category"];
-                string city = instruction.Parameters["city"];
-                var businesses = await _mongoHelper.SearchBusinessesByCategoryAndCityAsync(category, city);
-                break;
-
-            case InstructionType.ViewBusiness:
-                string businessId = instruction.Parameters["business_id"];
-                await _mongoHelper.GetBusinessByIdAsync(businessId);
-                break;
-
-            case InstructionType.PostReview:
-                var newReview = new Review
+                await _mongoHelper.InsertUserAsync(submitUser);
+                
+                // 2. Search for restaurants by name prefix
+                string submitNamePrefix = instruction.Parameters["name_prefix"];
+                var submitRestaurants = await _mongoHelper.SearchRestaurantsByNamePrefixAsync(submitNamePrefix, 10);
+                
+                if (submitRestaurants.Count > 0)
                 {
-                    ReviewId = Guid.NewGuid().ToString(),
-                    UserId = instruction.Parameters["user_id"],
-                    BusinessId = instruction.Parameters["business_id"],
-                    Stars = double.Parse(instruction.Parameters["stars"]),
-                    Text = instruction.Parameters["text"],
-                    Date = DateTime.UtcNow.ToString("yyyy-MM-dd")
-                };
-                await _mongoHelper.InsertReviewAsync(newReview);
-                break;
-
-            case InstructionType.PostTip:
-                var newTip = new Tip
-                {
-                    UserId = instruction.Parameters["user_id"],
-                    BusinessId = instruction.Parameters["business_id"],
-                    Text = instruction.Parameters["text"],
-                    Date = DateTime.UtcNow.ToString("yyyy-MM-dd"),
-                    ComplimentCount = 0
-                };
-                await _mongoHelper.InsertTipAsync(newTip);
-                break;
-
-            case InstructionType.ViewUser:
-                string userId = instruction.Parameters["user_id"];
-                await _mongoHelper.GetUserByIdAsync(userId);
-                break;
-
-            case InstructionType.ViewPhotos:
-                string photoBusinessId = instruction.Parameters["business_id"];
-                var photos = await _mongoHelper.GetPhotosByBusinessIdAsync(photoBusinessId);
-                break;
-
-            case InstructionType.Checkin:
-                var newCheckin = new Checkin
-                {
-                    BusinessId = instruction.Parameters["business_id"],
-                    Date = DateTime.Parse(instruction.Parameters["timestamp"]).ToString("yyyy-MM-dd")
-                };
-                await _mongoHelper.InsertCheckinAsync(newCheckin);
+                    // 3. Select the first matching business
+                    var targetBusiness = submitRestaurants[0];
+                    
+                    // 4. Fetch its reviews
+                    var businessReviews = await _mongoHelper.GetReviewsByBusinessIdAsync(targetBusiness.BusinessId);
+                    
+                    // 5. Retrieve the users who wrote those reviews
+                    var reviewerIds = businessReviews.Select(r => r.UserId).Distinct().ToList();
+                    var reviewers = await _mongoHelper.GetUsersByReviewIdsAsync(reviewerIds);
+                    
+                    // 6. Submit a new review for the business
+                    var submitReview = new Review
+                    {
+                        ReviewId = Guid.NewGuid().ToString(),
+                        UserId = submitUser.UserId,
+                        BusinessId = targetBusiness.BusinessId,
+                        Stars = double.Parse(instruction.Parameters["stars"]),
+                        Text = instruction.Parameters["text"],
+                        Date = DateTime.UtcNow.ToString("yyyy-MM-dd")
+                    };
+                    await _mongoHelper.InsertReviewAsync(submitReview);
+                }
                 break;
 
             default:
@@ -141,70 +143,73 @@ public class InstructionExecutor
     {
         switch (instruction.Type)
         {
-            case InstructionType.CreateUser:
-                var newUser = new User
+            case InstructionType.SearchForRestaurants:
+                // 1. Search for restaurants by name prefix
+                string namePrefix = instruction.Parameters["name_prefix"];
+                var matchedRestaurants = await _postgresHelper.SearchRestaurantsByNamePrefixAsync(namePrefix, 10);
+                
+                if (matchedRestaurants.Count > 0)
+                {
+                    // 2. For the first 3 matched restaurants (or fewer if less than 3 returned)
+                    for (int i = 0; i < Math.Min(3, matchedRestaurants.Count); i++)
+                    {
+                        var restaurant = matchedRestaurants[i];
+                        
+                        // 3. Fetch images for the restaurant
+                        var restaurantPhotos = await _postgresHelper.GetPhotosByBusinessIdAsync(restaurant.BusinessId);
+                        
+                        // 4. Fetch 10 most recent reviews
+                        var recentReviews = await _postgresHelper.GetMostRecentReviewsByBusinessIdAsync(restaurant.BusinessId, 10);
+                        
+                        // 5. Get users who wrote those reviews
+                        var userIds = recentReviews.Select(r => r.UserId).Distinct().ToList();
+                        var reviewUsers = await _postgresHelper.GetUsersByReviewIdsAsync(userIds);
+                        
+                        // 6. Sort reviews by proximity to 3-star ratings
+                        var sortedReviews = await _postgresHelper.GetReviewsByBusinessIdSortedByStarsAsync(restaurant.BusinessId, 3.0);
+                    }
+                }
+                break;
+
+            case InstructionType.SubmitReviews:
+                // 1. Create a new user
+                var submitUser = new User
                 {
                     UserId = Guid.NewGuid().ToString(),
-                    Name = instruction.Parameters["name"],
+                    Name = instruction.Parameters["user_name"],
                     ReviewCount = 0,
                     YelpingSince = DateTime.UtcNow.ToString("yyyy-MM-dd")
                 };
-                await _postgresHelper.InsertUserAsync(newUser);
-                break;
-
-            case InstructionType.SearchBusiness:
-                string category = instruction.Parameters["category"];
-                string city = instruction.Parameters["city"];
-                var businesses = await _postgresHelper.SearchBusinessesByCategoryAndCityAsync(category, city);
-                break;
-
-            case InstructionType.ViewBusiness:
-                string businessId = instruction.Parameters["business_id"];
-                await _postgresHelper.GetBusinessByIdAsync(businessId);
-                break;
-
-            case InstructionType.PostReview:
-                var newReview = new Review
+                await _postgresHelper.InsertUserAsync(submitUser);
+                
+                // 2. Search for restaurants by name prefix
+                string submitNamePrefix = instruction.Parameters["name_prefix"];
+                var submitRestaurants = await _postgresHelper.SearchRestaurantsByNamePrefixAsync(submitNamePrefix, 10);
+                
+                if (submitRestaurants.Count > 0)
                 {
-                    ReviewId = Guid.NewGuid().ToString(),
-                    UserId = instruction.Parameters["user_id"],
-                    BusinessId = instruction.Parameters["business_id"],
-                    Stars = double.Parse(instruction.Parameters["stars"]),
-                    Text = instruction.Parameters["text"],
-                    Date = DateTime.UtcNow.ToString("yyyy-MM-dd")
-                };
-                await _postgresHelper.InsertReviewAsync(newReview);
-                break;
-
-            case InstructionType.PostTip:
-                var newTip = new Tip
-                {
-                    UserId = instruction.Parameters["user_id"],
-                    BusinessId = instruction.Parameters["business_id"],
-                    Text = instruction.Parameters["text"],
-                    Date = DateTime.UtcNow.ToString("yyyy-MM-dd"),
-                    ComplimentCount = 0
-                };
-                await _postgresHelper.InsertTipAsync(newTip);
-                break;
-
-            case InstructionType.ViewUser:
-                string userId = instruction.Parameters["user_id"];
-                await _postgresHelper.GetUserByIdAsync(userId);
-                break;
-
-            case InstructionType.ViewPhotos:
-                string photoBusinessId = instruction.Parameters["business_id"];
-                var photos = await _postgresHelper.GetPhotosByBusinessIdAsync(photoBusinessId);
-                break;
-
-            case InstructionType.Checkin:
-                var newCheckin = new Checkin
-                {
-                    BusinessId = instruction.Parameters["business_id"],
-                    Date = DateTime.Parse(instruction.Parameters["timestamp"]).ToString("yyyy-MM-dd")
-                };
-                await _postgresHelper.InsertCheckinAsync(newCheckin);
+                    // 3. Select the first matching business
+                    var targetBusiness = submitRestaurants[0];
+                    
+                    // 4. Fetch its reviews
+                    var businessReviews = await _postgresHelper.GetReviewsByBusinessIdAsync(targetBusiness.BusinessId);
+                    
+                    // 5. Retrieve the users who wrote those reviews
+                    var reviewerIds = businessReviews.Select(r => r.UserId).Distinct().ToList();
+                    var reviewers = await _postgresHelper.GetUsersByReviewIdsAsync(reviewerIds);
+                    
+                    // 6. Submit a new review for the business
+                    var submitReview = new Review
+                    {
+                        ReviewId = Guid.NewGuid().ToString(),
+                        UserId = submitUser.UserId,
+                        BusinessId = targetBusiness.BusinessId,
+                        Stars = double.Parse(instruction.Parameters["stars"]),
+                        Text = instruction.Parameters["text"],
+                        Date = DateTime.UtcNow.ToString("yyyy-MM-dd")
+                    };
+                    await _postgresHelper.InsertReviewAsync(submitReview);
+                }
                 break;
 
             default:

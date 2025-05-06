@@ -3,7 +3,7 @@ using MongoDB.Bson.Serialization.Attributes;
 
 #pragma warning disable CS8618
 
-namespace project2_db_benchmark.Models.Shared
+namespace project2_db_benchmark.Models
 {
     [BsonIgnoreExtraElements]
     public class User

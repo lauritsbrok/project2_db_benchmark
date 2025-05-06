@@ -1,7 +1,6 @@
 using project2_db_benchmark.DatabaseHelper;
 using project2_db_benchmark.Helpers;
-using project2_db_benchmark.Models.Postgres;
-using project2_db_benchmark.Models.Shared;
+using project2_db_benchmark.Models;
 
 
 

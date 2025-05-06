@@ -5,13 +5,11 @@ public class UserStoryBenchmarkHelper(string instructionSetFile = "instruction-s
     public async Task<(double, double, List<double>)> RunBenchmarkAsyncMongo(int num_concurrent)
     {
         // Delete existing file if it exists
-        if (File.Exists(instructionSetFile))
+        if (!File.Exists(instructionSetFile))
         {
-            File.Delete(instructionSetFile);
+            var gen = new Generator.Generator(123);
+            await gen.Generate(numInstructions, instructionSetFile);
         }
-
-        var gen = new Generator.Generator(123);
-        await gen.Generate(numInstructions, instructionSetFile);
 
         var instructionExecutor = new InstructionExecutor(instructionSetFile);
 

@@ -1,12 +1,13 @@
 namespace project2_db_benchmark.Generator;
 
-using project2_db_benchmark.Generator.SampleModels;
+using project2_db_benchmark.Helpers;
+using project2_db_benchmark.Models;
 
 public class Generator(int seed = 42)
 {
-    private List<BusinessSample> _businesses = [];
-    private List<UserSample> _users = [];
-    private List<ReviewSample> _reviews = [];
+    private List<Business> _businesses = [];
+    private List<User> _users = [];
+    private List<Review> _reviews = [];
 
     private readonly Random _random = new(seed); // Same seed = same instruction set
     private readonly List<Instruction> _instructionSet = [];
@@ -39,83 +40,25 @@ public class Generator(int seed = 42)
     private Instruction GenerateInstruction(InstructionType type)
     {
         return type switch
-        {
-            InstructionType.CreateUser => new Instruction
+        {   
+            InstructionType.SearchForRestaurants => new Instruction
             {
                 Type = type,
                 Parameters = new Dictionary<string, string>
                 {
-                    { "name", $"user_{_random.Next(10000)}" }
+                    { "name_prefix", GetRandomBusinessNamePrefix() }
                 }
             },
-
-            InstructionType.SearchBusiness => new Instruction
+            
+            InstructionType.SubmitReviews => new Instruction
             {
                 Type = type,
                 Parameters = new Dictionary<string, string>
                 {
-                    { "category", GetRandomBusinessCategory() },
-                    { "city", GetRandomCity() }
-                }
-            },
-
-            InstructionType.ViewBusiness => new Instruction
-            {
-                Type = type,
-                Parameters = new Dictionary<string, string>
-                {
-                    { "business_id", GetRandomBusinessId() }
-                }
-            },
-
-            InstructionType.PostReview => new Instruction
-            {
-                Type = type,
-                Parameters = new Dictionary<string, string>
-                {
-                    { "user_id", GetRandomUserId() },
-                    { "business_id", GetRandomBusinessId() },
+                    { "name_prefix", GetRandomBusinessNamePrefix() },
+                    { "user_name", $"new_user_{_random.Next(10000)}" },
                     { "stars", (_random.Next(1, 6)).ToString() },
-                    { "text", "This is a test review." }
-                }
-            },
-
-            InstructionType.PostTip => new Instruction
-            {
-                Type = type,
-                Parameters = new Dictionary<string, string>
-                {
-                    { "user_id", GetRandomUserId() },
-                    { "business_id", GetRandomBusinessId() },
-                    { "text", "Helpful tip!" }
-                }
-            },
-
-            InstructionType.ViewUser => new Instruction
-            {
-                Type = type,
-                Parameters = new Dictionary<string, string>
-                {
-                    { "user_id", GetRandomUserId() }
-                }
-            },
-
-            InstructionType.ViewPhotos => new Instruction
-            {
-                Type = type,
-                Parameters = new Dictionary<string, string>
-                {
-                    { "business_id", GetRandomBusinessId() }
-                }
-            },
-
-            InstructionType.Checkin => new Instruction
-            {
-                Type = type,
-                Parameters = new Dictionary<string, string>
-                {
-                    { "business_id", GetRandomBusinessId() },
-                    { "timestamp", DateTime.UtcNow.ToString() }
+                    { "text", "This is a new test review for the benchmark." }
                 }
             },
 
@@ -127,9 +70,9 @@ public class Generator(int seed = 42)
 
     private async Task InitialiseAsync()
     {
-        _businesses = await SampleLoader.LoadFromJsonFile<BusinessSample>("samples/businesses_sample.json");
-        _users = await SampleLoader.LoadFromJsonFile<UserSample>("samples/users_sample.json");
-        _reviews = await SampleLoader.LoadFromJsonFile<ReviewSample>("samples/reviews_sample.json");
+        _businesses = (await Parser.Parse<Business>($"yelp_dataset/{Globals.BUSINESS_JSON_FILE_NAME}")).ToList();
+        _users = (await Parser.Parse<User>($"yelp_dataset/{Globals.USER_JSON_FILE_NAME}")).ToList();
+        _reviews = (await Parser.Parse<Review>($"yelp_dataset/{Globals.REVIEW_JSON_FILE_NAME}")).ToList();
     }
 
     private string GetRandomBusinessCategory()
@@ -139,11 +82,11 @@ public class Generator(int seed = 42)
             : "Restaurants";
     }
 
-    private UserSample GetRandomUser()
+    private User GetRandomUser()
     {
         return _users.Count > 0
             ? _users[_random.Next(_users.Count)]
-            : new UserSample { UserId = "user_fallback" };
+            : new User { UserId = "user_fallback" };
     }
 
     private string GetRandomUserId()
@@ -161,6 +104,16 @@ public class Generator(int seed = 42)
     private string GetRandomCity()
     {
         return _cities[_random.Next(_cities.Count)];
+    }
+
+    private string GetRandomBusinessNamePrefix()
+    {
+        if (_businesses.Count == 0)
+            return "Rest"; // Default prefix if no businesses
+
+        // Get a random business and take first 4 chars of its name
+        string businessName = _businesses[_random.Next(_businesses.Count)].Name ?? "Restaurant";
+        return businessName.Length >= 4 ? businessName.Substring(0, 4) : businessName;
     }
 
     public async Task Generate(int count, string filePath = "instruction-set.json")

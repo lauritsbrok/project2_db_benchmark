@@ -2,14 +2,8 @@ namespace project2_db_benchmark.Generator
 {
     public enum InstructionType
     {
-        CreateUser,
-        SearchBusiness,
-        ViewBusiness,
-        PostReview,
-        PostTip,
-        ViewUser,
-        ViewPhotos,
-        Checkin
+        SearchForRestaurants,
+        SubmitReviews
     }
 
     public class Instruction

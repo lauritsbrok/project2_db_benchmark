@@ -1,6 +1,5 @@
 using MongoDB.Driver;
-using project2_db_benchmark.Models.MongoDB;
-using project2_db_benchmark.Models.Shared;
+using project2_db_benchmark.Models;
 
 namespace project2_db_benchmark.DatabaseHelper
 {
@@ -208,6 +207,54 @@ namespace project2_db_benchmark.DatabaseHelper
         public async Task<List<Photo>> GetAllPhotosAsync()
         {
             return await _photos.Find(_ => true).ToListAsync();
+        }
+
+        public async Task<List<Business>> SearchRestaurantsByNamePrefixAsync(string namePrefix, int limit = 10)
+        {
+            // Create a regex filter for the name prefix
+            var regexPattern = $"^{namePrefix}";
+            var filter = Builders<Business>.Filter.And(
+                Builders<Business>.Filter.Regex(b => b.Name, new MongoDB.Bson.BsonRegularExpression(regexPattern, "i")),
+                Builders<Business>.Filter.Regex(b => b.Categories, new MongoDB.Bson.BsonRegularExpression("Restaurant", "i"))
+            );
+
+            return await _businesses.Find(filter).Limit(limit).ToListAsync();
+        }
+
+        public async Task<List<Review>> GetMostRecentReviewsByBusinessIdAsync(string businessId, int limit = 10)
+        {
+            var filter = Builders<Review>.Filter.Eq(r => r.BusinessId, businessId);
+            return await _reviews.Find(filter)
+                .Sort(Builders<Review>.Sort.Descending(r => r.Date))
+                .Limit(limit)
+                .ToListAsync();
+        }
+
+        public async Task<List<User>> GetUsersByReviewIdsAsync(List<string> userIds)
+        {
+            if (userIds == null || userIds.Count == 0)
+                return new List<User>();
+
+            var filter = Builders<User>.Filter.In(u => u.UserId, userIds);
+            return await _users.Find(filter).ToListAsync();
+        }
+
+        public async Task<List<Review>> GetReviewsByBusinessIdSortedByStarsAsync(string businessId, double targetStars = 3.0)
+        {
+            var filter = Builders<Review>.Filter.Eq(r => r.BusinessId, businessId);
+            
+            // This is an approximation of ordering by absolute difference from target stars
+            // MongoDB doesn't have a direct ABS function in the same way SQL does in sorting
+            var reviews = await _reviews.Find(filter).ToListAsync();
+            
+            // Sort in memory by the absolute difference from target stars
+            return reviews.OrderBy(r => Math.Abs(r.Stars - targetStars)).ToList();
+        }
+
+        public async Task<List<Review>> GetReviewsByBusinessIdAsync(string businessId)
+        {
+            var filter = Builders<Review>.Filter.Eq(r => r.BusinessId, businessId);
+            return await _reviews.Find(filter).ToListAsync();
         }
     }
 }

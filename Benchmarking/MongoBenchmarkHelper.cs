@@ -1,7 +1,6 @@
 using project2_db_benchmark.DatabaseHelper;
 using project2_db_benchmark.Helpers;
-using project2_db_benchmark.Models.MongoDB;
-using project2_db_benchmark.Models.Shared;
+using project2_db_benchmark.Models;
 
 namespace project2_db_benchmark.Benchmarking
 {

@@ -1,7 +1,7 @@
 ﻿using DotNetEnv;
 using project2_db_benchmark;
 using project2_db_benchmark.Benchmarking;
-using project2_db_benchmark.Models.Shared;
+using project2_db_benchmark.Models;
 
 Env.Load();
 
