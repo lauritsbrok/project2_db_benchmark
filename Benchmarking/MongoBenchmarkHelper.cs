@@ -35,7 +35,7 @@ namespace project2_db_benchmark.Benchmarking
 
             var (totalTime, latencies) = await ConcurrentBenchmarkHelper.RunTasks(inserts, concurrencyLevel);
 
-            int totalRecords = businesses.Count() + checkins.Count() + reviews.Count() + tips.Count() + users.Count();
+            int totalRecords = businesses.Count() + checkins.Count() + reviews.Count() + tips.Count() + users.Count() + photos.Count();
             double throughput = totalRecords / totalTime;
 
             return (totalTime, throughput, latencies);

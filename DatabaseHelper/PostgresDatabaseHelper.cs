@@ -322,8 +322,17 @@ public class PostgresDatabaseHelper : IDisposable
         cmd.Parameters.AddWithValue("business_id", photo.BusinessId);
         cmd.Parameters.AddWithValue("caption", photo.Caption);
         cmd.Parameters.AddWithValue("label", photo.Label);
-
-        await cmd.ExecuteNonQueryAsync();
+        
+        try
+        {
+            await cmd.ExecuteNonQueryAsync();
+            
+        }
+        catch (System.Exception)
+        {
+            Console.WriteLine(photo.PhotoId);
+            throw;
+        }
     }
 
     public async Task<List<Tip>> GetTipsByBusinessIdAsync(string businessId)

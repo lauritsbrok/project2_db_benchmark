@@ -32,11 +32,11 @@ namespace project2_db_benchmark.Benchmarking
             inserts.AddRange(reviews.Select<Review, Func<Task>>(r => () => _postgresHelper.InsertReviewAsync(r)));
             inserts.AddRange(tips.Select<Tip, Func<Task>>(t => () => _postgresHelper.InsertTipAsync(t)));
             inserts.AddRange(users.Select<User, Func<Task>>(u => () => _postgresHelper.InsertUserAsync(u)));
-            inserts.AddRange(photos.Select<Photo, Func<Task>>(u => () => _postgresHelper.InsertPhotoAsync(u)));
+            inserts.AddRange(photos.Select<Photo, Func<Task>>(p => () => _postgresHelper.InsertPhotoAsync(p)));
 
             var (totalTime, latencies) = await ConcurrentBenchmarkHelper.RunTasks(inserts, concurrencyLevel);
 
-            int totalRecords = businesses.Count() + checkins.Count() + reviews.Count() + tips.Count() + users.Count();
+            int totalRecords = businesses.Count() + checkins.Count() + reviews.Count() + tips.Count() + users.Count() + photos.Count();
             double throughput = totalRecords / totalTime;
 
             return (totalTime, throughput, latencies); ;

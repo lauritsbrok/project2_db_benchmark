@@ -8,11 +8,14 @@ public class UserStoryBenchmarkHelper
     public UserStoryBenchmarkHelper(string instructionSetFile = "instruction-set.json", int numInstructions = 100000)
     {
         _instructionSetFile = instructionSetFile;
-        
-        // Generate a new instruction file for each run
-        var gen = new Generator.Generator(123);
-        gen.Generate(numInstructions, _instructionSetFile).GetAwaiter().GetResult();
-        
+
+        // Only generate the instruction file if it does not already exist
+        if (!File.Exists(_instructionSetFile))
+        {
+            var gen = new Generator.Generator(123);
+            gen.Generate(numInstructions, _instructionSetFile).GetAwaiter().GetResult();
+        }
+
         _instructionExecutor = new InstructionExecutor(_instructionSetFile);
     }
 
