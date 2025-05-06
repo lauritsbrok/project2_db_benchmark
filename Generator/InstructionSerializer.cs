@@ -11,13 +11,13 @@ public static class InstructionSerializer
             WriteIndented = true
         };
 
-        using FileStream fs = File.Create(filePath);
+        await using FileStream fs = File.Create(filePath);
         await JsonSerializer.SerializeAsync(fs, instructions, options);
     }
 
     public static async Task<List<Instruction>> LoadInstructionsAsync(string filePath)
     {
-        using FileStream fs = File.OpenRead(filePath);
+        await using FileStream fs = File.OpenRead(filePath);
         return await JsonSerializer.DeserializeAsync<List<Instruction>>(fs) ?? new List<Instruction>();
     }
 }

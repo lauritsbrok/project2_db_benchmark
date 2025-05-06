@@ -4,6 +4,11 @@ using System.Text.Json;
 
 namespace project2_db_benchmark.Generator;
 
+/// <summary>
+/// This class is used to dump sample data into a JSON file.
+/// It is unused most of the time, but should not be deleted.
+/// </summary>
+
 public static class SampleDumper
 {
     public static async Task DumpBusinessSample(IEnumerable<Business> businesses, string path, int max = 10000)

@@ -1,15 +1,15 @@
 ﻿using DotNetEnv;
 using project2_db_benchmark;
 using project2_db_benchmark.Benchmarking;
-using project2_db_benchmark.Generator;
 
 Env.Load();
-
 
 // Initialize MongoDB helper
 Globals.Init();
 MongoBenchmarkHelper mongoImportHelper = new();
 PostgresImportHelper postgresImportHelper = new();
+UserStoryBenchmarkHelper userStoryBenchmark = new();
+
 
 Console.WriteLine("Benchmarking insert in Mongo DB ...");
 var (totalTime, throughput, latencies) = await mongoImportHelper.LoadAndInsert();
@@ -44,6 +44,5 @@ var (postgres_full_read_totalTime, postgres_full_read_throughput, postgres_full_
 Console.WriteLine($"PostgreSQL full table reads took {postgres_full_read_totalTime} seconds and had an average throughput of {postgres_full_read_throughput} reads pr second");
 Console.WriteLine($"Average Full Table Read Latency: {postgres_full_read_latencies.Average():F2} ms");
 
-
-var gen = new Generator(123);
-await gen.Generate();
+// Run user story benchmarks
+await userStoryBenchmark.RunBenchmarkAsync();
