@@ -17,7 +17,7 @@ namespace project2_db_benchmark.Benchmarking
         private IEnumerable<User> users = [];
         private IEnumerable<Photo> photos = [];
 
-        public async Task<(double, double, List<double>)> LoadAndInsert()
+        public async Task<(double, double, List<double>)> LoadAndInsert(int concurrencyLevel = 8)
         {
             businesses = await Parser.Parse<Business>($"yelp_dataset/{Globals.BUSINESS_JSON_FILE_NAME}");
             checkins = await Parser.Parse<Checkin>($"yelp_dataset/{Globals.CHECKIN_JSON_FILE_NAME}");
@@ -35,7 +35,7 @@ namespace project2_db_benchmark.Benchmarking
             inserts.AddRange(users.Select<User, Func<Task>>(u => () => _postgresHelper.InsertUserAsync(u)));
             inserts.AddRange(photos.Select<Photo, Func<Task>>(u => () => _postgresHelper.InsertPhotoAsync(u)));
 
-            var (totalTime, latencies) = await ConcurrentBenchmarkHelper.RunTasks(inserts);
+            var (totalTime, latencies) = await ConcurrentBenchmarkHelper.RunTasks(inserts, concurrencyLevel);
 
             int totalRecords = businesses.Count() + checkins.Count() + reviews.Count() + tips.Count() + users.Count();
             double throughput = totalRecords / totalTime;
@@ -44,9 +44,9 @@ namespace project2_db_benchmark.Benchmarking
         }
 
         public async Task<(double, double, List<double>)> BenchmarkReads()
-        {   
+        {
             var reads = new List<Func<Task>>();
-            
+
             foreach (var business in businesses)
             {
                 reads.Add(() => _postgresHelper.GetTipsByBusinessIdAsync(business.BusinessId));
@@ -68,13 +68,13 @@ namespace project2_db_benchmark.Benchmarking
             {
                 reads.Add(() => _postgresHelper.GetPhotoByIdAsync(photo.PhotoId));
             }
-            
+
             // Run the benchmarks
             var (totalTime, latencies) = await ConcurrentBenchmarkHelper.RunTasks(reads);
-            
+
             int totalReads = reads.Count;
             double throughput = totalReads / totalTime;
-            
+
             return (totalTime, throughput, latencies);
         }
 
@@ -91,10 +91,10 @@ namespace project2_db_benchmark.Benchmarking
             reads.Add(() => _postgresHelper.GetAllPhotosAsync());
 
             var (totalTime, latencies) = await ConcurrentBenchmarkHelper.RunTasks(reads);
-            
+
             int totalReads = reads.Count;
             double throughput = totalReads / totalTime;
-            
+
             return (totalTime, throughput, latencies);
         }
     }

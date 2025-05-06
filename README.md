@@ -30,28 +30,33 @@ The PostgreSQL implementation follows a relational model with tables correspondi
 ## Running the Project
 
 1. Start the MongoDB and PostgreSQL containers:
+
    ```
    docker-compose up -d
    ```
 
 2. Run the project to perform benchmark tests:
    ```
-   dotnet run
+   dotnet run --database <mongo or postgres> --num_concurrent <any number>
    ```
 
 ## Benchmarking
 
-The project includes tools for benchmarking:
-- Data import performance
-- Query performance for common operations
-- Geographic queries (MongoDB)
+To run the benchmarking for write:
 
-To run the benchmarks, uncomment the `await RunBenchmarksAsync(mongoHelper);` line in Program.cs.
+`./run_benchmarks.sh`
+
+This will save to csv files in the results dir; mongo.csv and postgres.csv
+
+To visualize it run:
+
+`python plot_metrics.py postgres.csv mongo.csv postgres mongo`
+
+The 5 resulting plots will be saved to the plots directory
 
 ## Check what is in postgres database
-`
-psql -h localhost -p 5433 -U myuser -d postgres_yelp
-`
+
+`psql -h localhost -p 5433 -U myuser -d postgres_yelp`
 
 to see tables: `\dt`
 To see what is inside tables: `SELECT * FROM businesses limit 5;`

@@ -14,7 +14,7 @@ namespace project2_db_benchmark.Benchmarking
         private IEnumerable<Tip> tips = [];
         private IEnumerable<User> users = [];
 
-        public async Task<(double, double, List<double>)> LoadAndInsert()
+        public async Task<(double, double, List<double>)> LoadAndInsert(int concurrencyLevel = 8)
         {
             businesses = await Parser.Parse<Business>($"yelp_dataset/{Globals.BUSINESS_JSON_FILE_NAME}");
             IEnumerable<Photo> photos = await Parser.Parse<Photo>($"yelp_dataset/{Globals.PHOTO_JSON_FILE_NAME}");
@@ -32,7 +32,7 @@ namespace project2_db_benchmark.Benchmarking
             inserts.AddRange(tips.Select<Tip, Func<Task>>(t => () => _mongoHelper.InsertTipAsync(t)));
             inserts.AddRange(users.Select<User, Func<Task>>(u => () => _mongoHelper.InsertUserAsync(u)));
 
-            var (totalTime, latencies) = await ConcurrentBenchmarkHelper.RunTasks(inserts);
+            var (totalTime, latencies) = await ConcurrentBenchmarkHelper.RunTasks(inserts, concurrencyLevel);
 
             int totalRecords = businesses.Count() + checkins.Count() + reviews.Count() + tips.Count() + users.Count();
             double throughput = totalRecords / totalTime;
@@ -41,14 +41,14 @@ namespace project2_db_benchmark.Benchmarking
         }
 
         public async Task<(double, double, List<double>)> BenchmarkReads()
-        {   
+        {
             // Extract distinct business IDs for tip lookups
             var businesses = await Parser.Parse<Business>($"yelp_dataset/{Globals.BUSINESS_JSON_FILE_NAME}");
             var businessIds = businesses.Select(b => b.BusinessId).ToList();
-            
+
             // Create a list of read operations
             var reads = new List<Func<Task>>();
-            
+
             // Add tip lookups by business ID
             foreach (var business in businesses)
             {
@@ -66,12 +66,12 @@ namespace project2_db_benchmark.Benchmarking
             {
                 reads.Add(() => _mongoHelper.GetReviewsByIdAsync(review.ReviewId));
             }
-            
+
             var (totalTime, latencies) = await ConcurrentBenchmarkHelper.RunTasks(reads);
-            
+
             int totalReads = reads.Count;
             double throughput = totalReads / totalTime;
-            
+
             return (totalTime, throughput, latencies);
         }
 
@@ -87,10 +87,10 @@ namespace project2_db_benchmark.Benchmarking
             reads.Add(() => _mongoHelper.GetAllTipsAsync());
 
             var (totalTime, latencies) = await ConcurrentBenchmarkHelper.RunTasks(reads);
-            
+
             int totalReads = reads.Count;
             double throughput = totalReads / totalTime;
-            
+
             return (totalTime, throughput, latencies);
         }
     }
