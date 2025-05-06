@@ -12,8 +12,8 @@ public class UserStoryBenchmarkHelper(string instructionSetFile = "instruction-s
 
         Console.WriteLine($"\nGenerating instruction set...");
         var gen = new Generator.Generator(123);
-        await gen.Generate(numInstructions, instructionSetFile); 
-        
+        await gen.Generate(numInstructions, instructionSetFile);
+
         // Benchmark realistic user behavior using instructions
         Console.WriteLine("\nBenchmarking realistic user behavior with instructions...");
         var instructionExecutor = new InstructionExecutor(instructionSetFile);

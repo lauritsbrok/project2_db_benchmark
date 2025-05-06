@@ -36,7 +36,8 @@ public class Generator(int seed = 42)
         }
     }
 
-    private Instruction GenerateInstruction(InstructionType type) {
+    private Instruction GenerateInstruction(InstructionType type)
+    {
         return type switch
         {
             InstructionType.CreateUser => new Instruction
@@ -133,15 +134,15 @@ public class Generator(int seed = 42)
 
     private string GetRandomBusinessCategory()
     {
-        return _businesses.Count > 0 
-            ? _businesses[_random.Next(_businesses.Count)].Categories ?? "Restaurants" 
+        return _businesses.Count > 0
+            ? _businesses[_random.Next(_businesses.Count)].Categories ?? "Restaurants"
             : "Restaurants";
     }
 
     private UserSample GetRandomUser()
     {
-        return _users.Count > 0 
-            ? _users[_random.Next(_users.Count)] 
+        return _users.Count > 0
+            ? _users[_random.Next(_users.Count)]
             : new UserSample { UserId = "user_fallback" };
     }
 
@@ -152,17 +153,18 @@ public class Generator(int seed = 42)
 
     private string GetRandomBusinessId()
     {
-        return _businesses.Count > 0 
-            ? _businesses[_random.Next(_businesses.Count)].BusinessId 
+        return _businesses.Count > 0
+            ? _businesses[_random.Next(_businesses.Count)].BusinessId
             : "business_fallback";
     }
 
-   private string GetRandomCity()
+    private string GetRandomCity()
     {
         return _cities[_random.Next(_cities.Count)];
     }
 
-    public async Task Generate(int count, string filePath = "instruction-set.json"){
+    public async Task Generate(int count, string filePath = "instruction-set.json")
+    {
         Console.WriteLine("Initialising test generator");
         await InitialiseAsync(); // Load your sample data
 
