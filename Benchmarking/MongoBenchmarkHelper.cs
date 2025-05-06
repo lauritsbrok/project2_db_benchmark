@@ -17,7 +17,6 @@ namespace project2_db_benchmark.Benchmarking
         public async Task<(double, double, List<double>)> LoadAndInsert(int concurrencyLevel = 8)
         {
             businesses = await Parser.Parse<Business>($"yelp_dataset/{Globals.BUSINESS_JSON_FILE_NAME}");
-            // businesses = Business.AttachPhotosToBusinesses(businesses, photos);
             checkins = await Parser.Parse<Checkin>($"yelp_dataset/{Globals.CHECKIN_JSON_FILE_NAME}");
             reviews = await Parser.Parse<Review>($"yelp_dataset/{Globals.REVIEW_JSON_FILE_NAME}");
             tips = await Parser.Parse<Tip>($"yelp_dataset/{Globals.TIP_JSON_FILE_NAME}");
@@ -43,9 +42,12 @@ namespace project2_db_benchmark.Benchmarking
 
         public async Task<(double, double, List<double>)> BenchmarkReads(int concurrencyLevel = 8)
         {
-            // Extract distinct business IDs for tip lookups
-            var businesses = await Parser.Parse<Business>($"yelp_dataset/{Globals.BUSINESS_JSON_FILE_NAME}");
-            var businessIds = businesses.Select(b => b.BusinessId).ToList();
+            businesses = await Parser.Parse<Business>($"yelp_dataset/{Globals.BUSINESS_JSON_FILE_NAME}");
+            checkins = await Parser.Parse<Checkin>($"yelp_dataset/{Globals.CHECKIN_JSON_FILE_NAME}");
+            reviews = await Parser.Parse<Review>($"yelp_dataset/{Globals.REVIEW_JSON_FILE_NAME}");
+            tips = await Parser.Parse<Tip>($"yelp_dataset/{Globals.TIP_JSON_FILE_NAME}");
+            users = await Parser.Parse<User>($"yelp_dataset/{Globals.USER_JSON_FILE_NAME}");
+            photos = await Parser.Parse<Photo>($"yelp_dataset/{Globals.PHOTO_JSON_FILE_NAME}");
 
             // Create a list of read operations
             var reads = new List<Func<Task>>();
