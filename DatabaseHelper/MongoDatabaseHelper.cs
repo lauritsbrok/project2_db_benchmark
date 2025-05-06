@@ -34,17 +34,14 @@ namespace project2_db_benchmark.DatabaseHelper
             _tips = _database.GetCollection<Tip>("tips");
             _photos = _database.GetCollection<Photo>("photos");
 
-            // Setup indexes only if needed
             EnsureIndexesExist().Wait();
         }
 
         private async Task EnsureIndexesExist()
         {
-            // Check if indexes exist by checking if there are any documents in the businesses collection
             var businessCount = await _businesses.CountDocumentsAsync(Builders<Business>.Filter.Empty);
             var reviewCount = await _reviews.CountDocumentsAsync(Builders<Review>.Filter.Empty);
             
-            // If data already exists, we assume indexes have been created
             if (businessCount > 0 && reviewCount > 0)
             {
                 Console.WriteLine("MongoDB collections already have data, skipping index creation.");
@@ -58,60 +55,91 @@ namespace project2_db_benchmark.DatabaseHelper
 
         private void SetupIndexes()
         {
-            // Business indexes
-            var businessBuilder = Builders<Business>.IndexKeys;
-            var businessIndexModels = new List<CreateIndexModel<Business>>
+            var businessKeys = Builders<Business>.IndexKeys;
+            var businessIndexes = new List<CreateIndexModel<Business>>
             {
-                new CreateIndexModel<Business>(businessBuilder.Ascending(b => b.Categories)),
-                new CreateIndexModel<Business>(businessBuilder.Ascending(b => b.City)),
-                new CreateIndexModel<Business>(businessBuilder.Descending(b => b.Stars)),
-            };
-            _businesses.Indexes.CreateMany(businessIndexModels);
+                new CreateIndexModel<Business>(businessKeys.Ascending(b => b.BusinessId),
+                    new CreateIndexOptions { Unique = true }),
 
-            // Review indexes
-            var reviewBuilder = Builders<Review>.IndexKeys;
-            var reviewIndexModels = new List<CreateIndexModel<Review>>
-            {
-                new CreateIndexModel<Review>(reviewBuilder.Ascending(r => r.BusinessId)),
-                new CreateIndexModel<Review>(reviewBuilder.Ascending(r => r.UserId)),
-                new CreateIndexModel<Review>(reviewBuilder.Descending(r => r.Date))
-            };
-            _reviews.Indexes.CreateMany(reviewIndexModels);
+                new CreateIndexModel<Business>(
+                    businessKeys.Ascending(b => b.City).Ascending(b => b.Categories)),
 
-            // User indexes
-            var userBuilder = Builders<User>.IndexKeys;
-            var userIndexModels = new List<CreateIndexModel<User>>
-            {
-                new CreateIndexModel<User>(userBuilder.Ascending(u => u.Name)),
-            };
-            _users.Indexes.CreateMany(userIndexModels);
+                new CreateIndexModel<Business>(businessKeys.Ascending(b => b.Name),
+                    new CreateIndexOptions
+                    {
+                        Collation = new Collation("en", strength: CollationStrength.Secondary)
+                    }),
 
-            // Checkin indexes (time-series)
-            var checkinBuilder = Builders<Checkin>.IndexKeys;
-            var checkinIndexModels = new List<CreateIndexModel<Checkin>>
-            {
-                new CreateIndexModel<Checkin>(checkinBuilder.Ascending(c => c.BusinessId)),
+                new CreateIndexModel<Business>(businessKeys.Descending(b => b.Stars))
             };
-            _checkins.Indexes.CreateMany(checkinIndexModels);
+            _businesses.Indexes.CreateMany(businessIndexes);
 
-            // Tip indexes
-            var tipBuilder = Builders<Tip>.IndexKeys;
-            var tipIndexModels = new List<CreateIndexModel<Tip>>
-            {
-                new CreateIndexModel<Tip>(tipBuilder.Ascending(t => t.BusinessId)),
-                new CreateIndexModel<Tip>(tipBuilder.Ascending(t => t.UserId)),
-                new CreateIndexModel<Tip>(tipBuilder.Descending(t => t.Date))
-            };
-            _tips.Indexes.CreateMany(tipIndexModels);
 
-            // Photo indexes
-            var photoBuilder = Builders<Photo>.IndexKeys;
-            var photoIndexModels = new List<CreateIndexModel<Photo>>
+            var reviewKeys = Builders<Review>.IndexKeys;
+            var reviewIndexes = new List<CreateIndexModel<Review>>
             {
-                new CreateIndexModel<Photo>(photoBuilder.Ascending(p => p.BusinessId)),
-                new CreateIndexModel<Photo>(photoBuilder.Ascending(p => p.Label))
+                new CreateIndexModel<Review>(reviewKeys.Ascending(r => r.ReviewId),
+                    new CreateIndexOptions { Unique = true }),
+
+                new CreateIndexModel<Review>(
+                    reviewKeys.Ascending(r => r.BusinessId).Descending(r => r.Date)),
+
+                new CreateIndexModel<Review>(
+                    reviewKeys.Ascending(r => r.BusinessId).Ascending(r => r.Stars)),
+
+                new CreateIndexModel<Review>(reviewKeys.Ascending(r => r.UserId))
             };
-            _photos.Indexes.CreateMany(photoIndexModels);
+            _reviews.Indexes.CreateMany(reviewIndexes);
+
+
+            // ----------  USER COLLECTION ----------
+            var userKeys = Builders<User>.IndexKeys;
+            var userIndexes = new List<CreateIndexModel<User>>
+            {
+                new CreateIndexModel<User>(userKeys.Ascending(u => u.UserId),
+                    new CreateIndexOptions { Unique = true }),
+
+                // Name lookup (exact or regex)
+                new CreateIndexModel<User>(userKeys.Ascending(u => u.Name),
+                    new CreateIndexOptions
+                    {
+                        Collation = new Collation("en", strength: CollationStrength.Secondary)
+                    })
+            };
+            _users.Indexes.CreateMany(userIndexes);
+
+
+            var checkinKeys = Builders<Checkin>.IndexKeys;
+            var checkinIndexes = new List<CreateIndexModel<Checkin>>
+            {
+                new CreateIndexModel<Checkin>(checkinKeys.Ascending(c => c.BusinessId)),
+            };
+            _checkins.Indexes.CreateMany(checkinIndexes);
+
+
+            var tipKeys = Builders<Tip>.IndexKeys;
+            var tipIndexes = new List<CreateIndexModel<Tip>>
+            {
+                new CreateIndexModel<Tip>(
+                    tipKeys.Ascending(t => t.BusinessId).Descending(t => t.Date)),
+
+                new CreateIndexModel<Tip>(tipKeys.Ascending(t => t.UserId))
+            };
+            _tips.Indexes.CreateMany(tipIndexes);
+
+
+            var photoKeys = Builders<Photo>.IndexKeys;
+            var photoIndexes = new List<CreateIndexModel<Photo>>
+            {
+                new CreateIndexModel<Photo>(photoKeys.Ascending(p => p.PhotoId),
+                    new CreateIndexOptions { Unique = true }),
+
+                new CreateIndexModel<Photo>(photoKeys.Ascending(p => p.BusinessId)),
+
+                new CreateIndexModel<Photo>(
+                    photoKeys.Ascending(p => p.BusinessId).Ascending(p => p.Label))
+            };
+            _photos.Indexes.CreateMany(photoIndexes);
         }
 
         public async Task InsertBusinessAsync(Business business)
