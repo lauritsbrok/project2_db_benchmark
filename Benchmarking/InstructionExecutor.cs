@@ -30,13 +30,12 @@ public class InstructionExecutor
     /// <summary>
     /// Benchmarks the execution of instructions against MongoDB
     /// </summary>
-    public async Task<(double TotalTime, double Throughput, List<double> Latencies)> BenchmarkMongoDbAsync()
+    public async Task<(double TotalTime, double Throughput, List<double> Latencies)> BenchmarkMongoDbAsync(int concurrencyLevel = 8)
     {
-        Console.WriteLine("Starting MongoDB instruction benchmark...");
 
         var instructionExecutions = new List<Func<Task>>();
         instructionExecutions.AddRange(_instructions.Select<Instruction, Func<Task>>(b => () => ExecuteMongoInstruction(b)));
-        var (totalTime, latencies) = await ConcurrentBenchmarkHelper.RunTasks(instructionExecutions);
+        var (totalTime, latencies) = await ConcurrentBenchmarkHelper.RunTasks(instructionExecutions, concurrencyLevel);
 
         double throughput = _instructions.Count / totalTime;
 
@@ -46,12 +45,11 @@ public class InstructionExecutor
     /// <summary>
     /// Benchmarks the execution of instructions against PostgreSQL
     /// </summary>
-    public async Task<(double TotalTime, double Throughput, List<double> Latencies)> BenchmarkPostgresAsync()
+    public async Task<(double TotalTime, double Throughput, List<double> Latencies)> BenchmarkPostgresAsync(int concurrencyLevel = 8)
     {
-        Console.WriteLine("Starting PostgreSQL instruction benchmark...");
         var instructionExecutions = new List<Func<Task>>();
         instructionExecutions.AddRange(_instructions.Select<Instruction, Func<Task>>(b => () => ExecutePostgresInstruction(b)));
-        var (totalTime, latencies) = await ConcurrentBenchmarkHelper.RunTasks(instructionExecutions);
+        var (totalTime, latencies) = await ConcurrentBenchmarkHelper.RunTasks(instructionExecutions, concurrencyLevel);
 
         double throughput = _instructions.Count / totalTime;
 

@@ -1,48 +1,129 @@
 ﻿using DotNetEnv;
 using project2_db_benchmark;
 using project2_db_benchmark.Benchmarking;
+using project2_db_benchmark.Models.Shared;
 
 Env.Load();
 
-// Initialize MongoDB helper
+// Parse command line arguments
+int numConcurrent = 8; // Default value
+string database = "both"; // Default to running both databases
+string benchmarkType = "write"; // Default to read
+var cmdArgs = Environment.GetCommandLineArgs();
+string resultsDir = "results";
+for (int i = 0; i < cmdArgs.Length - 1; i++)
+{
+    if (cmdArgs[i] == "--num_concurrent" && int.TryParse(cmdArgs[i + 1], out int parsedValue))
+    {
+        numConcurrent = parsedValue;
+    }
+    else if (cmdArgs[i] == "--database" && i + 1 < cmdArgs.Length)
+    {
+        database = cmdArgs[i + 1].ToLower();
+        if (database != "mongo" && database != "postgres" && database != "both")
+        {
+            Console.WriteLine("Invalid database option. Use 'mongo', 'postgres', or 'both'");
+            return;
+        }
+    }
+    else if (cmdArgs[i] == "--benchmark_type" && i + 1 < cmdArgs.Length)
+    {
+        benchmarkType = cmdArgs[i + 1].ToLower();
+        if (benchmarkType != "user-read" && benchmarkType != "write" && benchmarkType != "full-table-read" && benchmarkType != "user-story")
+        {
+            Console.WriteLine("Invalid benchmark type option. Use 'user-read', 'write', 'full-table-read', or 'user-story'");
+            return;
+        }
+    }
+    else if (cmdArgs[i] == "--results_dir")
+    {
+        resultsDir = cmdArgs[i + 1];
+    }
+}
+
 Globals.Init();
-MongoBenchmarkHelper mongoImportHelper = new();
-PostgresImportHelper postgresImportHelper = new();
-UserStoryBenchmarkHelper userStoryBenchmark = new();
+MongoBenchmarkHelper mongoBenchmarkHelper = new();
+MongoBenchmarkHelper postgresBenchmarkHelper = new();
+UserStoryBenchmarkHelper userStoryBenchmarkHelper = new();
 
+if (benchmarkType == "write")
+{
+    Console.WriteLine($"Running with concurrency level: {numConcurrent}");
+    Console.WriteLine($"Selected database(s): {database}");
 
-Console.WriteLine("Benchmarking insert in Mongo DB ...");
-var (totalTime, throughput, latencies) = await mongoImportHelper.LoadAndInsert();
-Console.WriteLine($"Mongo insert took {totalTime} seconds and had an average throughput of {throughput} tuples pr second");
-Console.WriteLine($"Average Latency: {latencies.Average():F2} ms");
+    // Initialize helpers
+    Console.WriteLine("Initializing helpers...");
+    Console.WriteLine("Helpers initialized");
 
-Console.WriteLine("Benchmarking insert in Postgres ...");
-var (postgres_totalTime, postgres_throughput, postgres_latencies) = await postgresImportHelper.LoadAndInsert();
-Console.WriteLine($"Postgres insert took {postgres_totalTime} seconds and had an average throughput of {postgres_throughput} tuples pr second");
-Console.WriteLine($"Average Latency: {postgres_latencies.Average():F2} ms");
-Console.WriteLine($"All data inserted");
+    if (database == "mongo" || database == "both")
+    {
+        string resultsFileMongo = $"{resultsDir}/mongo_write.csv";
+        Console.WriteLine("Benchmarking insert in Mongo DB ...");
+        var (totalTime, throughput, latencies) = await mongoBenchmarkHelper.LoadAndInsert(numConcurrent);
+        File.AppendAllText(resultsFileMongo, $"{numConcurrent},{totalTime},{throughput},{latencies.Min()},{latencies.Max()},{latencies.Average()},{latencies.OrderBy(l => l).ElementAt(latencies.Count / 100 * 99)},{latencies.OrderBy(l => l).ElementAt(latencies.Count / 100 * 90)}\n");
+    }
 
-// Benchmark read operations
-Console.WriteLine("\nBenchmarking reads in Mongo DB ...");
-var (mongo_read_totalTime, mongo_read_throughput, mongo_read_latencies) = await mongoImportHelper.BenchmarkReads();
-Console.WriteLine($"Mongo reads took {mongo_read_totalTime} seconds and had an average throughput of {mongo_read_throughput} reads pr second");
-Console.WriteLine($"Average Read Latency: {mongo_read_latencies.Average():F2} ms");
+    if (database == "postgres" || database == "both")
+    {
+        string resultsFilePostgres = $"{resultsDir}/postgres_write.csv";
+        Console.WriteLine("Benchmarking insert in Postgres ...");
+        var (totalTime, throughput, latencies) = await postgresBenchmarkHelper.LoadAndInsert(numConcurrent);
+        File.AppendAllText(resultsFilePostgres, $"{numConcurrent},{totalTime},{throughput},{latencies.Min()},{latencies.Max()},{latencies.Average()},{latencies.OrderBy(l => l).ElementAt(latencies.Count / 100 * 99)},{latencies.OrderBy(l => l).ElementAt(latencies.Count / 100 * 90)}\n");
+    }
+}
 
-Console.WriteLine("\nBenchmarking reads in Postgres ...");
-var (postgres_read_totalTime, postgres_read_throughput, postgres_read_latencies) = await postgresImportHelper.BenchmarkReads();
-Console.WriteLine($"Postgres reads took {postgres_read_totalTime} seconds and had an average throughput of {postgres_read_throughput} reads pr second");
-Console.WriteLine($"Average Read Latency: {postgres_read_latencies.Average():F2} ms");
+if (benchmarkType == "user-read")
+{
+    if (database == "mongo" || database == "both")
+    {
+        Console.WriteLine("\nBenchmarking user reads in Mongo DB ...");
+        string resultsFileMongo = $"{resultsDir}/mongo_user_read.csv";
+        var (mongo_read_totalTime, mongo_read_throughput, mongo_read_latencies) = await mongoBenchmarkHelper.BenchmarkReads(numConcurrent);
+        File.AppendAllText(resultsFileMongo, $"{numConcurrent},{mongo_read_totalTime},{mongo_read_throughput},{mongo_read_latencies.Min()},{mongo_read_latencies.Max()},{mongo_read_latencies.Average()},{mongo_read_latencies.OrderBy(l => l).ElementAt(mongo_read_latencies.Count / 100 * 99)},{mongo_read_latencies.OrderBy(l => l).ElementAt(mongo_read_latencies.Count / 100 * 90)}\n");
+    }
+    if (database == "postgres" || database == "both")
+    {
+        Console.WriteLine("Benchmarking user reads in Postgres ...");
+        string resultsFilePostgres = $"{resultsDir}/postgres_user_read.csv";
+        var (postgres_read_totalTime, postgres_read_throughput, postgres_read_latencies) = await postgresBenchmarkHelper.BenchmarkReads(numConcurrent);
+        File.AppendAllText(resultsFilePostgres, $"{numConcurrent},{postgres_read_totalTime},{postgres_read_throughput},{postgres_read_latencies.Min()},{postgres_read_latencies.Max()},{postgres_read_latencies.Average()},{postgres_read_latencies.OrderBy(l => l).ElementAt(postgres_read_latencies.Count / 100 * 99)},{postgres_read_latencies.OrderBy(l => l).ElementAt(postgres_read_latencies.Count / 100 * 90)}\n");
+    }
 
-// Benchmark full collection/table reads
-Console.WriteLine("\nBenchmarking full collection reads in MongoDB ...");
-var (mongo_full_read_totalTime, mongo_full_read_throughput, mongo_full_read_latencies) = await mongoImportHelper.BenchmarkFullCollectionReads();
-Console.WriteLine($"MongoDB full collection reads took {mongo_full_read_totalTime} seconds and had an average throughput of {mongo_full_read_throughput} reads pr second");
-Console.WriteLine($"Average Full Collection Read Latency: {mongo_full_read_latencies.Average():F2} ms");
+}
 
-Console.WriteLine("\nBenchmarking full table reads in PostgreSQL ...");
-var (postgres_full_read_totalTime, postgres_full_read_throughput, postgres_full_read_latencies) = await postgresImportHelper.BenchmarkFullTableReads();
-Console.WriteLine($"PostgreSQL full table reads took {postgres_full_read_totalTime} seconds and had an average throughput of {postgres_full_read_throughput} reads pr second");
-Console.WriteLine($"Average Full Table Read Latency: {postgres_full_read_latencies.Average():F2} ms");
+if (benchmarkType == "full-table-read")
+{
+    if (database == "mongo" || database == "both")
+    {
+        Console.WriteLine("\nBenchmarking full table reads in Mongo DB ...");
+        string resultsFileMongo = $"{resultsDir}/mongo_full_table_read.csv";
+        var (mongo_read_totalTime, mongo_read_throughput, mongo_read_latencies) = await mongoBenchmarkHelper.BenchmarkFullCollectionReads(numConcurrent);
+        File.AppendAllText(resultsFileMongo, $"{numConcurrent},{mongo_read_totalTime},{mongo_read_throughput},{mongo_read_latencies.Min()},{mongo_read_latencies.Max()},{mongo_read_latencies.Average()},{mongo_read_latencies.OrderBy(l => l).ElementAt(mongo_read_latencies.Count / 100 * 99)},{mongo_read_latencies.OrderBy(l => l).ElementAt(mongo_read_latencies.Count / 100 * 90)}\n");
+    }
+    if (database == "postgres" || database == "both")
+    {
+        Console.WriteLine("Benchmarking full table reads in Postgres ...");
+        string resultsFilePostgres = $"{resultsDir}/postgres_full_table_read.csv";
+        var (postgres_read_totalTime, postgres_read_throughput, postgres_read_latencies) = await postgresBenchmarkHelper.BenchmarkFullCollectionReads(numConcurrent);
+        File.AppendAllText(resultsFilePostgres, $"{numConcurrent},{postgres_read_totalTime},{postgres_read_throughput},{postgres_read_latencies.Min()},{postgres_read_latencies.Max()},{postgres_read_latencies.Average()},{postgres_read_latencies.OrderBy(l => l).ElementAt(postgres_read_latencies.Count / 100 * 99)},{postgres_read_latencies.OrderBy(l => l).ElementAt(postgres_read_latencies.Count / 100 * 90)}\n");
+    }
 
-// Run user story benchmarks
-await userStoryBenchmark.RunBenchmarkAsync();
+}
+
+if (benchmarkType == "user-story")
+{
+    if (database == "mongo" || database == "both")
+    {
+        Console.WriteLine("\nBenchmarking user story in Mongo DB ...");
+        string resultsFileMongo = $"{resultsDir}/mongo_user_story.csv";
+        var (mongo_read_totalTime, mongo_read_throughput, mongo_read_latencies) = await userStoryBenchmarkHelper.RunBenchmarkAsyncMongo(numConcurrent);
+        File.AppendAllText(resultsFileMongo, $"{numConcurrent},{mongo_read_totalTime},{mongo_read_throughput},{mongo_read_latencies.Min()},{mongo_read_latencies.Max()},{mongo_read_latencies.Average()},{mongo_read_latencies.OrderBy(l => l).ElementAt(mongo_read_latencies.Count / 100 * 99)},{mongo_read_latencies.OrderBy(l => l).ElementAt(mongo_read_latencies.Count / 100 * 90)}\n");
+    }
+    if (database == "postgres" || database == "both")
+    {
+        Console.WriteLine("Benchmarking user story in Postgres ...");
+        string resultsFilePostgres = $"{resultsDir}/postgres_user_story.csv";
+        var (postgres_read_totalTime, postgres_read_throughput, postgres_read_latencies) = await userStoryBenchmarkHelper.RunBenchmarkAsyncPostgres(numConcurrent);
+        File.AppendAllText(resultsFilePostgres, $"{numConcurrent},{postgres_read_totalTime},{postgres_read_throughput},{postgres_read_latencies.Min()},{postgres_read_latencies.Max()},{postgres_read_latencies.Average()},{postgres_read_latencies.OrderBy(l => l).ElementAt(postgres_read_latencies.Count / 100 * 99)},{postgres_read_latencies.OrderBy(l => l).ElementAt(postgres_read_latencies.Count / 100 * 90)}\n");
+    }
+}

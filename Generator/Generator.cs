@@ -165,17 +165,14 @@ public class Generator(int seed = 42)
 
     public async Task Generate(int count, string filePath = "instruction-set.json")
     {
-        Console.WriteLine("Initialising test generator");
         await InitialiseAsync(); // Load your sample data
 
-        Console.WriteLine($"Generating {count} test instructions...");
         // Generate smaller set of instructions for testing
         GenerateInstructions(count);
 
         // Get the generated instructions
         var instructions = GetInstructions();
 
-        Console.WriteLine("Serialising test set");
         // Save instructions to a test file
         await InstructionSerializer.SaveInstructionsAsync(instructions, filePath);
         Console.WriteLine($"{instructions.Count} instructions saved to {filePath}");
