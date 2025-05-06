@@ -15,9 +15,10 @@ namespace project2_db_benchmark.DatabaseHelper
         private readonly IMongoCollection<User> _users;
         private readonly IMongoCollection<Checkin> _checkins;
         private readonly IMongoCollection<Tip> _tips;
+        private readonly IMongoCollection<Photo> _photos;
 
         public MongoDatabaseHelper()
-        {   
+        {
             var connectionString = $"mongodb://{Globals.MANGO_DB_USERNAME}:{Globals.MANGO_DB_PASSWORD}@localhost:27017";
 
             _client = new MongoClient(connectionString);
@@ -29,6 +30,7 @@ namespace project2_db_benchmark.DatabaseHelper
             _users = _database.GetCollection<User>("users");
             _checkins = _database.GetCollection<Checkin>("checkins");
             _tips = _database.GetCollection<Tip>("tips");
+            _photos = _database.GetCollection<Photo>("photos");
 
             // Setup indexes
             SetupIndexes();
@@ -89,7 +91,9 @@ namespace project2_db_benchmark.DatabaseHelper
                 new CreateIndexModel<Photo>(photoBuilder.Ascending(p => p.BusinessId)),
                 new CreateIndexModel<Photo>(photoBuilder.Ascending(p => p.Label))
             };
+            _photos.Indexes.CreateMany(photoIndexModels);
         }
+
         public async Task InsertBusinessAsync(Business business)
         {
             await _businesses.InsertOneAsync(business);
@@ -113,6 +117,11 @@ namespace project2_db_benchmark.DatabaseHelper
         public async Task InsertTipAsync(Tip tip)
         {
             await _tips.InsertOneAsync(tip);
+        }
+
+        public async Task InsertPhotoAsync(Photo photo)
+        {
+            await _photos.InsertOneAsync(photo);
         }
 
         public void DeleteDatabase()
@@ -150,6 +159,27 @@ namespace project2_db_benchmark.DatabaseHelper
             return await _checkins.Find(filter).ToListAsync();
         }
 
+        public async Task<Photo> GetPhotoByIdAsync(string photoId)
+        {
+            var filter = Builders<Photo>.Filter.Eq(p => p.PhotoId, photoId);
+            return await _photos.Find(filter).FirstOrDefaultAsync();
+        }
+
+        public async Task<List<Business>> SearchBusinessesByCategoryAndCityAsync(string category, string city)
+        {
+            var filter = Builders<Business>.Filter.And(
+                Builders<Business>.Filter.Regex(b => b.Categories, new MongoDB.Bson.BsonRegularExpression(category, "i")),
+                Builders<Business>.Filter.Eq(b => b.City, city)
+            );
+            return await _businesses.Find(filter).ToListAsync();
+        }
+
+        public async Task<List<Photo>> GetPhotosByBusinessIdAsync(string businessId)
+        {
+            var filter = Builders<Photo>.Filter.Eq(p => p.BusinessId, businessId);
+            return await _photos.Find(filter).ToListAsync();
+        }
+
         public async Task<List<Business>> GetAllBusinessesAsync()
         {
             return await _businesses.Find(_ => true).ToListAsync();
@@ -174,5 +204,10 @@ namespace project2_db_benchmark.DatabaseHelper
         {
             return await _tips.Find(_ => true).ToListAsync();
         }
+
+        public async Task<List<Photo>> GetAllPhotosAsync()
+        {
+            return await _photos.Find(_ => true).ToListAsync();
+        }
     }
-} 
+}

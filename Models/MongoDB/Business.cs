@@ -47,7 +47,7 @@ namespace project2_db_benchmark.Models.MongoDB
         [JsonPropertyName("attributes")]
         [BsonIgnore] // ignore this raw JsonElement in Mongo
         public JsonElement RawAttributes { get; set; }
-        
+
         [BsonElement("attributes")]
         [BsonIgnoreIfNull]
         public object Attributes
@@ -74,22 +74,22 @@ namespace project2_db_benchmark.Models.MongoDB
 
         [JsonPropertyName("hours")]
         public Dictionary<string, string> Hours { get; set; }
-        [JsonIgnore]
-        public IEnumerable<Photo> Photos { get; set; }
-        public static IEnumerable<Business> AttachPhotosToBusinesses(IEnumerable<Business> businesses, IEnumerable<Photo> photos)
-        {
-            var photoLookup = photos
-                .GroupBy(p => p.BusinessId)
-                .ToDictionary(g => g.Key, g => g.ToList());
+        // [JsonIgnore]
+        // public IEnumerable<Photo> Photos { get; set; }
+        // public static IEnumerable<Business> AttachPhotosToBusinesses(IEnumerable<Business> businesses, IEnumerable<Photo> photos)
+        // {
+        //     var photoLookup = photos
+        //         .GroupBy(p => p.BusinessId)
+        //         .ToDictionary(g => g.Key, g => g.ToList());
 
-            foreach (var business in businesses)
-            {
-                photoLookup.TryGetValue(business.BusinessId, out var matchedPhotos);
-                business.Photos = matchedPhotos ?? [];
-            }
+        //     foreach (var business in businesses)
+        //     {
+        //         photoLookup.TryGetValue(business.BusinessId, out var matchedPhotos);
+        //         business.Photos = matchedPhotos ?? [];
+        //     }
 
-            return businesses;
-        }
+        //     return businesses;
+        // }
     }
 }
 

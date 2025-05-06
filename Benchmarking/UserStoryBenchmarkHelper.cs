@@ -1,6 +1,6 @@
 namespace project2_db_benchmark.Benchmarking;
 
-public class UserStoryBenchmarkHelper(string instructionSetFile = "instruction-set.json", int numInstructions = 100)
+public class UserStoryBenchmarkHelper(string instructionSetFile = "instruction-set.json", int numInstructions = 50000)
 {
     public async Task RunBenchmarkAsync()
     {

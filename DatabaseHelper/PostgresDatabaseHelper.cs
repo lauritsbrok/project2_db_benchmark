@@ -319,17 +319,17 @@ public class PostgresDatabaseHelper : IDisposable
     {
         await using var conn = await _dataSource.OpenConnectionAsync();
         await using var cmd = conn.CreateCommand();
-        
+
         cmd.CommandText = @"
             SELECT text, date, compliment_count, business_id, user_id
             FROM tip
             WHERE business_id = @business_id";
-        
+
         cmd.Parameters.AddWithValue("business_id", businessId);
-        
+
         var tips = new List<Tip>();
         await using var reader = await cmd.ExecuteReaderAsync();
-        
+
         while (await reader.ReadAsync())
         {
             tips.Add(new Tip
@@ -341,7 +341,7 @@ public class PostgresDatabaseHelper : IDisposable
                 UserId = reader.GetString(4)
             });
         }
-        
+
         return tips;
     }
 
@@ -349,18 +349,18 @@ public class PostgresDatabaseHelper : IDisposable
     {
         await using var conn = await _dataSource.OpenConnectionAsync();
         await using var cmd = conn.CreateCommand();
-        
+
         cmd.CommandText = @"
             SELECT business_id, name, address, city, state, postal_code,
                    latitude, longitude, stars, review_count, is_open,
                    attributes, categories, hours
             FROM business
             WHERE business_id = @business_id";
-        
+
         cmd.Parameters.AddWithValue("business_id", businessId);
-        
+
         await using var reader = await cmd.ExecuteReaderAsync();
-        
+
         if (await reader.ReadAsync())
         {
             return new Business
@@ -380,7 +380,7 @@ public class PostgresDatabaseHelper : IDisposable
                 Categories = !reader.IsDBNull(12) ? reader.GetString(12) : null
             };
         }
-        
+
         return null;
     }
 
@@ -388,18 +388,18 @@ public class PostgresDatabaseHelper : IDisposable
     {
         await using var conn = await _dataSource.OpenConnectionAsync();
         await using var cmd = conn.CreateCommand();
-        
+
         cmd.CommandText = @"
             SELECT review_id, user_id, business_id, stars, date,
                    text, useful, funny, cool
             FROM review
             WHERE review_id = @review_id";
-        
+
         cmd.Parameters.AddWithValue("review_id", reviewId);
-        
+
         var reviews = new List<Review>();
         await using var reader = await cmd.ExecuteReaderAsync();
-        
+
         while (await reader.ReadAsync())
         {
             reviews.Add(new Review
@@ -415,7 +415,7 @@ public class PostgresDatabaseHelper : IDisposable
                 Cool = !reader.IsDBNull(8) ? reader.GetInt32(8) : null
             });
         }
-        
+
         return reviews;
     }
 
@@ -423,7 +423,7 @@ public class PostgresDatabaseHelper : IDisposable
     {
         await using var conn = await _dataSource.OpenConnectionAsync();
         await using var cmd = conn.CreateCommand();
-        
+
         cmd.CommandText = @"
             SELECT user_id, name, review_count, yelping_since, friends,
                    useful, funny, cool, fans, elite, average_stars,
@@ -433,11 +433,11 @@ public class PostgresDatabaseHelper : IDisposable
                    compliment_writer, compliment_photos
             FROM users
             WHERE user_id = @user_id";
-        
+
         cmd.Parameters.AddWithValue("user_id", userId);
-        
+
         await using var reader = await cmd.ExecuteReaderAsync();
-        
+
         if (await reader.ReadAsync())
         {
             return new User
@@ -447,7 +447,7 @@ public class PostgresDatabaseHelper : IDisposable
                 // Additional properties omitted for brevity but would be included in a full implementation
             };
         }
-        
+
         return null;
     }
 
@@ -455,17 +455,17 @@ public class PostgresDatabaseHelper : IDisposable
     {
         await using var conn = await _dataSource.OpenConnectionAsync();
         await using var cmd = conn.CreateCommand();
-        
+
         cmd.CommandText = @"
             SELECT business_id, date
             FROM checkin
             WHERE business_id = @business_id";
-        
+
         cmd.Parameters.AddWithValue("business_id", businessId);
-        
+
         var checkins = new List<Checkin>();
         await using var reader = await cmd.ExecuteReaderAsync();
-        
+
         while (await reader.ReadAsync())
         {
             checkins.Add(new Checkin
@@ -474,7 +474,7 @@ public class PostgresDatabaseHelper : IDisposable
                 Date = reader.GetString(1)
             });
         }
-        
+
         return checkins;
     }
 
@@ -482,16 +482,16 @@ public class PostgresDatabaseHelper : IDisposable
     {
         await using var conn = await _dataSource.OpenConnectionAsync();
         await using var cmd = conn.CreateCommand();
-        
+
         cmd.CommandText = @"
             SELECT photo_id, business_id, caption, label
             FROM photo
             WHERE photo_id = @photo_id";
-        
+
         cmd.Parameters.AddWithValue("photo_id", photoId);
-        
+
         await using var reader = await cmd.ExecuteReaderAsync();
-        
+
         if (await reader.ReadAsync())
         {
             return new Photo
@@ -502,7 +502,7 @@ public class PostgresDatabaseHelper : IDisposable
                 Label = reader.GetString(3)
             };
         }
-        
+
         return null;
     }
 
@@ -510,12 +510,12 @@ public class PostgresDatabaseHelper : IDisposable
     {
         await using var conn = await _dataSource.OpenConnectionAsync();
         await using var cmd = conn.CreateCommand();
-        
+
         cmd.CommandText = @"SELECT * FROM business";
-        
+
         var businesses = new List<Business>();
         await using var reader = await cmd.ExecuteReaderAsync();
-        
+
         while (await reader.ReadAsync())
         {
             businesses.Add(new Business
@@ -534,7 +534,7 @@ public class PostgresDatabaseHelper : IDisposable
                 Categories = !reader.IsDBNull(12) ? reader.GetString(12) : null
             });
         }
-        
+
         return businesses;
     }
 
@@ -542,12 +542,12 @@ public class PostgresDatabaseHelper : IDisposable
     {
         await using var conn = await _dataSource.OpenConnectionAsync();
         await using var cmd = conn.CreateCommand();
-        
+
         cmd.CommandText = @"SELECT * FROM review";
-        
+
         var reviews = new List<Review>();
         await using var reader = await cmd.ExecuteReaderAsync();
-        
+
         while (await reader.ReadAsync())
         {
             reviews.Add(new Review
@@ -563,7 +563,7 @@ public class PostgresDatabaseHelper : IDisposable
                 Cool = !reader.IsDBNull(8) ? reader.GetInt32(8) : null
             });
         }
-        
+
         return reviews;
     }
 
@@ -571,12 +571,12 @@ public class PostgresDatabaseHelper : IDisposable
     {
         await using var conn = await _dataSource.OpenConnectionAsync();
         await using var cmd = conn.CreateCommand();
-        
+
         cmd.CommandText = @"SELECT * FROM users";
-        
+
         var users = new List<User>();
         await using var reader = await cmd.ExecuteReaderAsync();
-        
+
         while (await reader.ReadAsync())
         {
             users.Add(new User
@@ -605,7 +605,7 @@ public class PostgresDatabaseHelper : IDisposable
                 ComplimentPhotos = !reader.IsDBNull(21) ? reader.GetInt32(21) : null
             });
         }
-        
+
         return users;
     }
 
@@ -613,12 +613,12 @@ public class PostgresDatabaseHelper : IDisposable
     {
         await using var conn = await _dataSource.OpenConnectionAsync();
         await using var cmd = conn.CreateCommand();
-        
+
         cmd.CommandText = @"SELECT * FROM checkin";
-        
+
         var checkins = new List<Checkin>();
         await using var reader = await cmd.ExecuteReaderAsync();
-        
+
         while (await reader.ReadAsync())
         {
             checkins.Add(new Checkin
@@ -627,7 +627,7 @@ public class PostgresDatabaseHelper : IDisposable
                 Date = reader.GetString(1)
             });
         }
-        
+
         return checkins;
     }
 
@@ -635,12 +635,12 @@ public class PostgresDatabaseHelper : IDisposable
     {
         await using var conn = await _dataSource.OpenConnectionAsync();
         await using var cmd = conn.CreateCommand();
-        
+
         cmd.CommandText = @"SELECT * FROM tip";
-        
+
         var tips = new List<Tip>();
         await using var reader = await cmd.ExecuteReaderAsync();
-        
+
         while (await reader.ReadAsync())
         {
             tips.Add(new Tip
@@ -652,7 +652,7 @@ public class PostgresDatabaseHelper : IDisposable
                 UserId = reader.GetString(4)
             });
         }
-        
+
         return tips;
     }
 
@@ -660,12 +660,12 @@ public class PostgresDatabaseHelper : IDisposable
     {
         await using var conn = await _dataSource.OpenConnectionAsync();
         await using var cmd = conn.CreateCommand();
-        
+
         cmd.CommandText = @"SELECT * FROM photo";
-        
+
         var photos = new List<Photo>();
         await using var reader = await cmd.ExecuteReaderAsync();
-        
+
         while (await reader.ReadAsync())
         {
             photos.Add(new Photo
@@ -676,7 +676,74 @@ public class PostgresDatabaseHelper : IDisposable
                 Label = reader.GetString(3)
             });
         }
-        
+
+        return photos;
+    }
+
+    public async Task<List<Business>> SearchBusinessesByCategoryAndCityAsync(string category, string city)
+    {
+        await using var conn = await _dataSource.OpenConnectionAsync();
+        await using var cmd = conn.CreateCommand();
+
+        cmd.CommandText = @"
+            SELECT * FROM business
+            WHERE categories LIKE @category
+            AND city = @city";
+
+        cmd.Parameters.AddWithValue("category", $"%{category}%");
+        cmd.Parameters.AddWithValue("city", city);
+
+        var businesses = new List<Business>();
+        await using var reader = await cmd.ExecuteReaderAsync();
+
+        while (await reader.ReadAsync())
+        {
+            businesses.Add(new Business
+            {
+                BusinessId = reader.GetString(0),
+                Name = reader.GetString(1),
+                Address = !reader.IsDBNull(2) ? reader.GetString(2) : null,
+                City = !reader.IsDBNull(3) ? reader.GetString(3) : null,
+                State = !reader.IsDBNull(4) ? reader.GetString(4) : null,
+                PostalCode = !reader.IsDBNull(5) ? reader.GetString(5) : null,
+                Latitude = !reader.IsDBNull(6) ? reader.GetDouble(6) : null,
+                Longitude = !reader.IsDBNull(7) ? reader.GetDouble(7) : null,
+                Stars = !reader.IsDBNull(8) ? reader.GetDouble(8) : null,
+                ReviewCount = !reader.IsDBNull(9) ? reader.GetInt32(9) : null,
+                IsOpen = !reader.IsDBNull(10) ? reader.GetInt32(10) : null,
+                Categories = !reader.IsDBNull(12) ? reader.GetString(12) : null
+            });
+        }
+
+        return businesses;
+    }
+
+    public async Task<List<Photo>> GetPhotosByBusinessIdAsync(string businessId)
+    {
+        await using var conn = await _dataSource.OpenConnectionAsync();
+        await using var cmd = conn.CreateCommand();
+
+        cmd.CommandText = @"
+            SELECT photo_id, business_id, caption, label
+            FROM photo
+            WHERE business_id = @business_id";
+
+        cmd.Parameters.AddWithValue("business_id", businessId);
+
+        var photos = new List<Photo>();
+        await using var reader = await cmd.ExecuteReaderAsync();
+
+        while (await reader.ReadAsync())
+        {
+            photos.Add(new Photo
+            {
+                PhotoId = reader.GetString(0),
+                BusinessId = reader.GetString(1),
+                Caption = reader.GetString(2),
+                Label = reader.GetString(3)
+            });
+        }
+
         return photos;
     }
 

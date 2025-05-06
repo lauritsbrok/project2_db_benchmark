@@ -4,6 +4,7 @@ using project2_db_benchmark.Generator;
 using project2_db_benchmark.Models.Shared;
 using project2_db_benchmark.Models.MongoDB;
 using project2_db_benchmark.Helpers;
+using MongoDB.Driver;
 
 namespace project2_db_benchmark.Benchmarking;
 
@@ -78,13 +79,7 @@ public class InstructionExecutor
             case InstructionType.SearchBusiness:
                 string category = instruction.Parameters["category"];
                 string city = instruction.Parameters["city"];
-                // MongoDB doesn't have a direct method for this, so we'll query businesses by category
-                var categoryFilter = System.Text.RegularExpressions.Regex.Escape(category);
-                var cityFilter = city;
-                var businesses = await _mongoHelper.GetAllBusinessesAsync();
-                var filteredBusinesses = businesses
-                    .Where(b => b.Categories != null && b.Categories.Contains(category) && b.City == city)
-                    .ToList();
+                var businesses = await _mongoHelper.SearchBusinessesByCategoryAndCityAsync(category, city);
                 break;
 
             case InstructionType.ViewBusiness:
@@ -124,10 +119,7 @@ public class InstructionExecutor
 
             case InstructionType.ViewPhotos:
                 string photoBusinessId = instruction.Parameters["business_id"];
-                // We don't have a direct method for photos, so we'll get the business and access its photos
-                var business = await _mongoHelper.GetBusinessByIdAsync(photoBusinessId);
-                // Simulate viewing photos
-                var photoItems = business?.Photos ?? Enumerable.Empty<Photo>();
+                var photos = await _mongoHelper.GetPhotosByBusinessIdAsync(photoBusinessId);
                 break;
 
             case InstructionType.Checkin:
@@ -165,12 +157,7 @@ public class InstructionExecutor
             case InstructionType.SearchBusiness:
                 string category = instruction.Parameters["category"];
                 string city = instruction.Parameters["city"];
-                // Postgres doesn't have a direct method for searching by both category and city,
-                // so we'll get all businesses and filter client-side
-                var businesses = await _postgresHelper.GetAllBusinessesAsync();
-                var filteredBusinesses = businesses
-                    .Where(b => b.Categories != null && b.Categories.Contains(category) && b.City == city)
-                    .ToList();
+                var businesses = await _postgresHelper.SearchBusinessesByCategoryAndCityAsync(category, city);
                 break;
 
             case InstructionType.ViewBusiness:
@@ -210,9 +197,7 @@ public class InstructionExecutor
 
             case InstructionType.ViewPhotos:
                 string photoBusinessId = instruction.Parameters["business_id"];
-                // We'll use GetAllPhotos and filter by business ID
-                var allPhotos = await _postgresHelper.GetAllPhotosAsync();
-                var businessPhotos = allPhotos.Where(p => p.BusinessId == photoBusinessId).ToList();
+                var photos = await _postgresHelper.GetPhotosByBusinessIdAsync(photoBusinessId);
                 break;
 
             case InstructionType.Checkin:

@@ -44,14 +44,14 @@ namespace project2_db_benchmark.Benchmarking
         }
 
         public async Task<(double, double, List<double>)> BenchmarkReads()
-        {   
+        {
             var reads = new List<Func<Task>>();
-            
+
             foreach (var business in businesses)
             {
-                reads.Add(() => _postgresHelper.GetTipsByBusinessIdAsync(business.BusinessId));
                 reads.Add(() => _postgresHelper.GetBusinessByIdAsync(business.BusinessId));
                 reads.Add(() => _postgresHelper.GetCheckinsByBusinessIdAsync(business.BusinessId));
+                reads.Add(() => _postgresHelper.GetTipsByBusinessIdAsync(business.BusinessId));
             }
 
             foreach (var review in reviews)
@@ -68,13 +68,13 @@ namespace project2_db_benchmark.Benchmarking
             {
                 reads.Add(() => _postgresHelper.GetPhotoByIdAsync(photo.PhotoId));
             }
-            
+
             // Run the benchmarks
             var (totalTime, latencies) = await ConcurrentBenchmarkHelper.RunTasks(reads);
-            
+
             int totalReads = reads.Count;
             double throughput = totalReads / totalTime;
-            
+
             return (totalTime, throughput, latencies);
         }
 
@@ -91,10 +91,10 @@ namespace project2_db_benchmark.Benchmarking
             reads.Add(() => _postgresHelper.GetAllPhotosAsync());
 
             var (totalTime, latencies) = await ConcurrentBenchmarkHelper.RunTasks(reads);
-            
+
             int totalReads = reads.Count;
             double throughput = totalReads / totalTime;
-            
+
             return (totalTime, throughput, latencies);
         }
     }
