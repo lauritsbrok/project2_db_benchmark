@@ -40,7 +40,7 @@ namespace project2_db_benchmark.Benchmarking
             return (totalTime, throughput, latencies);
         }
 
-        public async Task<(double, double, List<double>)> BenchmarkReads()
+        public async Task<(double, double, List<double>)> BenchmarkReads(int concurrencyLevel = 8)
         {
             // Extract distinct business IDs for tip lookups
             var businesses = await Parser.Parse<Business>($"yelp_dataset/{Globals.BUSINESS_JSON_FILE_NAME}");
@@ -67,7 +67,7 @@ namespace project2_db_benchmark.Benchmarking
                 reads.Add(() => _mongoHelper.GetReviewsByIdAsync(review.ReviewId));
             }
 
-            var (totalTime, latencies) = await ConcurrentBenchmarkHelper.RunTasks(reads);
+            var (totalTime, latencies) = await ConcurrentBenchmarkHelper.RunTasks(reads, concurrencyLevel);
 
             int totalReads = reads.Count;
             double throughput = totalReads / totalTime;
@@ -75,7 +75,7 @@ namespace project2_db_benchmark.Benchmarking
             return (totalTime, throughput, latencies);
         }
 
-        public async Task<(double, double, List<double>)> BenchmarkFullCollectionReads()
+        public async Task<(double, double, List<double>)> BenchmarkFullCollectionReads(int concurrencyLevel = 8)
         {
             var reads = new List<Func<Task>>();
 
@@ -86,7 +86,7 @@ namespace project2_db_benchmark.Benchmarking
             reads.Add(() => _mongoHelper.GetAllCheckinsAsync());
             reads.Add(() => _mongoHelper.GetAllTipsAsync());
 
-            var (totalTime, latencies) = await ConcurrentBenchmarkHelper.RunTasks(reads);
+            var (totalTime, latencies) = await ConcurrentBenchmarkHelper.RunTasks(reads, concurrencyLevel);
 
             int totalReads = reads.Count;
             double throughput = totalReads / totalTime;

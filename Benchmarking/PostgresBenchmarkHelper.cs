@@ -43,7 +43,7 @@ namespace project2_db_benchmark.Benchmarking
             return (totalTime, throughput, latencies); ;
         }
 
-        public async Task<(double, double, List<double>)> BenchmarkReads()
+        public async Task<(double, double, List<double>)> BenchmarkReads(int concurrencyLevel = 8)
         {
             var reads = new List<Func<Task>>();
 
@@ -70,7 +70,7 @@ namespace project2_db_benchmark.Benchmarking
             }
 
             // Run the benchmarks
-            var (totalTime, latencies) = await ConcurrentBenchmarkHelper.RunTasks(reads);
+            var (totalTime, latencies) = await ConcurrentBenchmarkHelper.RunTasks(reads, concurrencyLevel);
 
             int totalReads = reads.Count;
             double throughput = totalReads / totalTime;
@@ -78,7 +78,7 @@ namespace project2_db_benchmark.Benchmarking
             return (totalTime, throughput, latencies);
         }
 
-        public async Task<(double, double, List<double>)> BenchmarkFullTableReads()
+        public async Task<(double, double, List<double>)> BenchmarkFullTableReads(int concurrencyLevel = 8)
         {
             var reads = new List<Func<Task>>();
 
@@ -90,7 +90,7 @@ namespace project2_db_benchmark.Benchmarking
             reads.Add(() => _postgresHelper.GetAllTipsAsync());
             reads.Add(() => _postgresHelper.GetAllPhotosAsync());
 
-            var (totalTime, latencies) = await ConcurrentBenchmarkHelper.RunTasks(reads);
+            var (totalTime, latencies) = await ConcurrentBenchmarkHelper.RunTasks(reads, concurrencyLevel);
 
             int totalReads = reads.Count;
             double throughput = totalReads / totalTime;
