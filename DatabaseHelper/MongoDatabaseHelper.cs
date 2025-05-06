@@ -1,5 +1,8 @@
 using MongoDB.Driver;
 using project2_db_benchmark.Models;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace project2_db_benchmark.DatabaseHelper
 {
@@ -31,8 +34,26 @@ namespace project2_db_benchmark.DatabaseHelper
             _tips = _database.GetCollection<Tip>("tips");
             _photos = _database.GetCollection<Photo>("photos");
 
-            // Setup indexes
+            // Setup indexes only if needed
+            EnsureIndexesExist().Wait();
+        }
+
+        private async Task EnsureIndexesExist()
+        {
+            // Check if indexes exist by checking if there are any documents in the businesses collection
+            var businessCount = await _businesses.CountDocumentsAsync(Builders<Business>.Filter.Empty);
+            var reviewCount = await _reviews.CountDocumentsAsync(Builders<Review>.Filter.Empty);
+            
+            // If data already exists, we assume indexes have been created
+            if (businessCount > 0 && reviewCount > 0)
+            {
+                Console.WriteLine("MongoDB collections already have data, skipping index creation.");
+                return;
+            }
+            
+            Console.WriteLine("Creating MongoDB indexes...");
             SetupIndexes();
+            Console.WriteLine("MongoDB indexes created successfully.");
         }
 
         private void SetupIndexes()
@@ -209,13 +230,12 @@ namespace project2_db_benchmark.DatabaseHelper
             return await _photos.Find(_ => true).ToListAsync();
         }
 
-        public async Task<List<Business>> SearchRestaurantsByNamePrefixAsync(string namePrefix, int limit = 10)
+        public async Task<List<Business>> SearchBusinessesByNamePrefixAsync(string namePrefix, int limit = 10)
         {
             // Create a regex filter for the name prefix
             var regexPattern = $"^{namePrefix}";
             var filter = Builders<Business>.Filter.And(
-                Builders<Business>.Filter.Regex(b => b.Name, new MongoDB.Bson.BsonRegularExpression(regexPattern, "i")),
-                Builders<Business>.Filter.Regex(b => b.Categories, new MongoDB.Bson.BsonRegularExpression("Restaurant", "i"))
+                Builders<Business>.Filter.Regex(b => b.Name, new MongoDB.Bson.BsonRegularExpression(regexPattern, "i"))
             );
 
             return await _businesses.Find(filter).Limit(limit).ToListAsync();

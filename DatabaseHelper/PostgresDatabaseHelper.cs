@@ -18,7 +18,7 @@ public class PostgresDatabaseHelper : IDisposable
         dataSourceBuilder.EnableDynamicJson();
         _dataSource = dataSourceBuilder.Build();
 
-        // Drop and recreate database tables
+        // Create database tables if they don't exist
         InitializeDatabase().Wait();
     }
 
@@ -27,108 +27,117 @@ public class PostgresDatabaseHelper : IDisposable
         await using var conn = await _dataSource.OpenConnectionAsync();
         await using var cmd = conn.CreateCommand();
 
-        // Drop existing tables if they exist
+        // Check if business table exists (as a proxy for all tables)
         cmd.CommandText = @"
-            DROP TABLE IF EXISTS photo CASCADE;
-            DROP TABLE IF EXISTS tip CASCADE;
-            DROP TABLE IF EXISTS checkin CASCADE;
-            DROP TABLE IF EXISTS review CASCADE;
-            DROP TABLE IF EXISTS users CASCADE;
-            DROP TABLE IF EXISTS business CASCADE;
-        ";
-        await cmd.ExecuteNonQueryAsync();
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables 
+                WHERE table_schema = 'public' 
+                AND table_name = 'business'
+            );";
+        
+        bool tablesExist = (bool)await cmd.ExecuteScalarAsync();
+        
+        // Only create tables if they don't exist
+        if (!tablesExist)
+        {
+            Console.WriteLine("Creating PostgreSQL tables...");
+            
+            // Create tables
+            cmd.CommandText = @"
+                CREATE TABLE IF NOT EXISTS business (
+                    business_id text PRIMARY KEY,
+                    name text,
+                    address text,
+                    city text,
+                    state text,
+                    postal_code text,
+                    latitude double precision,
+                    longitude double precision,
+                    stars double precision,
+                    review_count int,
+                    is_open int,
+                    attributes jsonb,
+                    categories text,
+                    hours jsonb
+                );
 
-        // Create tables
-        cmd.CommandText = @"
-            CREATE TABLE business (
-                business_id text PRIMARY KEY,
-                name text,
-                address text,
-                city text,
-                state text,
-                postal_code text,
-                latitude double precision,
-                longitude double precision,
-                stars double precision,
-                review_count int,
-                is_open int,
-                attributes jsonb,
-                categories text,
-                hours jsonb
-            );
+                CREATE TABLE IF NOT EXISTS ""users"" (
+                    ""user_id"" text PRIMARY KEY,
+                    ""name"" text,
+                    ""review_count"" int,
+                    ""yelping_since"" text,
+                    ""friends"" text,
+                    ""useful"" int,
+                    ""funny"" int,
+                    ""cool"" int,
+                    ""fans"" int,
+                    ""elite"" text,
+                    ""average_stars"" double precision,
+                    ""compliment_hot"" int,
+                    ""compliment_more"" int,
+                    ""compliment_profile"" int,
+                    ""compliment_cute"" int,
+                    ""compliment_list"" int,
+                    ""compliment_note"" int,
+                    ""compliment_plain"" int,
+                    ""compliment_cool"" int,
+                    ""compliment_funny"" int,
+                    ""compliment_writer"" int,
+                    ""compliment_photos"" int
+                );
 
-            CREATE TABLE IF NOT EXISTS ""users"" (
-                ""user_id"" text PRIMARY KEY,
-                ""name"" text,
-                ""review_count"" int,
-                ""yelping_since"" text,
-                ""friends"" text,
-                ""useful"" int,
-                ""funny"" int,
-                ""cool"" int,
-                ""fans"" int,
-                ""elite"" text,
-                ""average_stars"" double precision,
-                ""compliment_hot"" int,
-                ""compliment_more"" int,
-                ""compliment_profile"" int,
-                ""compliment_cute"" int,
-                ""compliment_list"" int,
-                ""compliment_note"" int,
-                ""compliment_plain"" int,
-                ""compliment_cool"" int,
-                ""compliment_funny"" int,
-                ""compliment_writer"" int,
-                ""compliment_photos"" int
-            );
+                CREATE TABLE IF NOT EXISTS review (
+                    review_id text PRIMARY KEY,
+                    user_id text,
+                    business_id text,
+                    stars double precision,
+                    date text,
+                    text text,
+                    useful int,
+                    funny int,
+                    cool int
+                );
 
-            CREATE TABLE review (
-                review_id text PRIMARY KEY,
-                user_id text,
-                business_id text,
-                stars double precision,
-                date text,
-                text text,
-                useful int,
-                funny int,
-                cool int
-            );
+                CREATE TABLE IF NOT EXISTS checkin (
+                    business_id text,
+                    date text
+                );
 
-            CREATE TABLE checkin (
-                business_id text,
-                date text
-            );
+                CREATE TABLE IF NOT EXISTS tip (
+                    text text,
+                    date text,
+                    compliment_count INT,
+                    business_id text,
+                    user_id text
+                );
 
-            CREATE TABLE tip (
-                text text,
-                date text,
-                compliment_count INT,
-                business_id text,
-                user_id text
-            );
+                CREATE TABLE IF NOT EXISTS photo (
+                    photo_id VARCHAR(255) PRIMARY KEY,
+                    business_id VARCHAR(255) NOT NULL,
+                    caption TEXT NOT NULL,
+                    label VARCHAR(255) NOT NULL
+                );
 
-            CREATE TABLE photo (
-                photo_id VARCHAR(255) PRIMARY KEY,
-                business_id VARCHAR(255) NOT NULL,
-                caption TEXT NOT NULL,
-                label VARCHAR(255) NOT NULL,
-                FOREIGN KEY (business_id) REFERENCES business(business_id)
-            );
-
-            CREATE INDEX idx_businesses_categories ON business(categories);
-            CREATE INDEX idx_businesses_city ON business(city);
-            CREATE INDEX idx_businesses_stars ON business(stars);
-            CREATE INDEX idx_reviews_business_id ON review(business_id);
-            CREATE INDEX idx_reviews_user_id ON review(user_id);
-            CREATE INDEX idx_reviews_date ON review(date);
-            CREATE INDEX idx_users_name ON users(name);
-            CREATE INDEX idx_checkins_business_id ON checkin(business_id);
-            CREATE INDEX idx_tips_business_id ON tip(business_id);
-            CREATE INDEX idx_tips_user_id ON tip(user_id);
-            CREATE INDEX idx_tips_date ON tip(date);
-            CREATE INDEX idx_photos_business_id ON photo(business_id);
-        ";
-        await cmd.ExecuteNonQueryAsync();
+                CREATE INDEX IF NOT EXISTS idx_businesses_categories ON business(categories);
+                CREATE INDEX IF NOT EXISTS idx_businesses_city ON business(city);
+                CREATE INDEX IF NOT EXISTS idx_businesses_stars ON business(stars);
+                CREATE INDEX IF NOT EXISTS idx_reviews_business_id ON review(business_id);
+                CREATE INDEX IF NOT EXISTS idx_reviews_user_id ON review(user_id);
+                CREATE INDEX IF NOT EXISTS idx_reviews_date ON review(date);
+                CREATE INDEX IF NOT EXISTS idx_users_name ON users(name);
+                CREATE INDEX IF NOT EXISTS idx_checkins_business_id ON checkin(business_id);
+                CREATE INDEX IF NOT EXISTS idx_tips_business_id ON tip(business_id);
+                CREATE INDEX IF NOT EXISTS idx_tips_user_id ON tip(user_id);
+                CREATE INDEX IF NOT EXISTS idx_tips_date ON tip(date);
+                CREATE INDEX IF NOT EXISTS idx_photos_business_id ON photo(business_id);
+            ";
+            await cmd.ExecuteNonQueryAsync();
+            Console.WriteLine("PostgreSQL tables created successfully.");
+        }
+        else
+        {
+            Console.WriteLine("PostgreSQL tables already exist, skipping creation.");
+        }
     }
 
     public async Task InsertBusinessAsync(Business business)
@@ -796,7 +805,7 @@ public class PostgresDatabaseHelper : IDisposable
         return photos;
     }
 
-    public async Task<List<Business>> SearchRestaurantsByNamePrefixAsync(string namePrefix, int limit = 10)
+    public async Task<List<Business>> SearchBusinessesByNamePrefixAsync(string namePrefix, int limit = 10)
     {
         await using var conn = await _dataSource.OpenConnectionAsync();
         await using var cmd = conn.CreateCommand();
@@ -804,7 +813,6 @@ public class PostgresDatabaseHelper : IDisposable
         cmd.CommandText = @"
             SELECT * FROM business
             WHERE name LIKE @name_prefix 
-            AND categories LIKE '%Restaurant%'
             LIMIT @limit";
 
         cmd.Parameters.AddWithValue("name_prefix", $"{namePrefix}%");

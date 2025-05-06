@@ -41,7 +41,7 @@ public class Generator(int seed = 42)
     {
         return type switch
         {   
-            InstructionType.SearchForRestaurants => new Instruction
+            InstructionType.SearchForBusinesses => new Instruction
             {
                 Type = type,
                 Parameters = new Dictionary<string, string>
@@ -73,13 +73,6 @@ public class Generator(int seed = 42)
         _businesses = (await Parser.Parse<Business>($"yelp_dataset/{Globals.BUSINESS_JSON_FILE_NAME}")).ToList();
         _users = (await Parser.Parse<User>($"yelp_dataset/{Globals.USER_JSON_FILE_NAME}")).ToList();
         _reviews = (await Parser.Parse<Review>($"yelp_dataset/{Globals.REVIEW_JSON_FILE_NAME}")).ToList();
-    }
-
-    private string GetRandomBusinessCategory()
-    {
-        return _businesses.Count > 0
-            ? _businesses[_random.Next(_businesses.Count)].Categories ?? "Restaurants"
-            : "Restaurants";
     }
 
     private User GetRandomUser()

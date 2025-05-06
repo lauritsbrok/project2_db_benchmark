@@ -6,7 +6,7 @@ using project2_db_benchmark.Models;
 
 namespace project2_db_benchmark.Benchmarking
 {
-    public class PostgresImportHelper()
+    public class PostgresBenchmarkHelper()
     {
         private readonly PostgresDatabaseHelper _postgresHelper = new();
         private IEnumerable<Business> businesses = [];

@@ -43,7 +43,7 @@ for (int i = 0; i < cmdArgs.Length - 1; i++)
 
 Globals.Init();
 MongoBenchmarkHelper mongoBenchmarkHelper = new();
-MongoBenchmarkHelper postgresBenchmarkHelper = new();
+PostgresBenchmarkHelper postgresBenchmarkHelper = new();
 UserStoryBenchmarkHelper userStoryBenchmarkHelper = new();
 
 if (benchmarkType == "write")
@@ -104,7 +104,7 @@ if (benchmarkType == "full-table-read")
     {
         Console.WriteLine("Benchmarking full table reads in Postgres ...");
         string resultsFilePostgres = $"{resultsDir}/postgres_full_table_read.csv";
-        var (postgres_read_totalTime, postgres_read_throughput, postgres_read_latencies) = await postgresBenchmarkHelper.BenchmarkFullCollectionReads(numConcurrent);
+        var (postgres_read_totalTime, postgres_read_throughput, postgres_read_latencies) = await postgresBenchmarkHelper.BenchmarkFullTableReads(numConcurrent);
         File.AppendAllText(resultsFilePostgres, $"{numConcurrent},{postgres_read_totalTime},{postgres_read_throughput},{postgres_read_latencies.Min()},{postgres_read_latencies.Max()},{postgres_read_latencies.Average()},{postgres_read_latencies.OrderBy(l => l).ElementAt(postgres_read_latencies.Count / 100 * 99)},{postgres_read_latencies.OrderBy(l => l).ElementAt(postgres_read_latencies.Count / 100 * 90)}\n");
     }
 

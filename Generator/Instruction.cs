@@ -2,7 +2,7 @@ namespace project2_db_benchmark.Generator
 {
     public enum InstructionType
     {
-        SearchForRestaurants,
+        SearchForBusinesses,
         SubmitReviews
     }
 

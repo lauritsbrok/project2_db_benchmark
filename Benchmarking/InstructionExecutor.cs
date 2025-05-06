@@ -62,30 +62,30 @@ public class InstructionExecutor
     {
         switch (instruction.Type)
         {
-            case InstructionType.SearchForRestaurants:
-                // 1. Search for restaurants by name prefix
+            case InstructionType.SearchForBusinesses:
+                // 1. Search for businesses by name prefix
                 string namePrefix = instruction.Parameters["name_prefix"];
-                var matchedRestaurants = await _mongoHelper.SearchRestaurantsByNamePrefixAsync(namePrefix, 10);
+                var matchedBusinesses = await _mongoHelper.SearchBusinessesByNamePrefixAsync(namePrefix, 10);
                 
-                if (matchedRestaurants.Count > 0)
+                if (matchedBusinesses.Count > 0)
                 {
-                    // 2. For the first 3 matched restaurants (or fewer if less than 3 returned)
-                    for (int i = 0; i < Math.Min(3, matchedRestaurants.Count); i++)
+                    // 2. For the first 3 matched businesses (or fewer if less than 3 returned)
+                    for (int i = 0; i < Math.Min(3, matchedBusinesses.Count); i++)
                     {
-                        var restaurant = matchedRestaurants[i];
+                        var business = matchedBusinesses[i];
                         
-                        // 3. Fetch images for the restaurant
-                        var restaurantPhotos = await _mongoHelper.GetPhotosByBusinessIdAsync(restaurant.BusinessId);
+                        // 3. Fetch images for the business
+                        var businessPhotos = await _mongoHelper.GetPhotosByBusinessIdAsync(business.BusinessId);
                         
                         // 4. Fetch 10 most recent reviews
-                        var recentReviews = await _mongoHelper.GetMostRecentReviewsByBusinessIdAsync(restaurant.BusinessId, 10);
+                        var recentReviews = await _mongoHelper.GetMostRecentReviewsByBusinessIdAsync(business.BusinessId, 10);
                         
                         // 5. Get users who wrote those reviews
                         var userIds = recentReviews.Select(r => r.UserId).Distinct().ToList();
                         var reviewUsers = await _mongoHelper.GetUsersByReviewIdsAsync(userIds);
                         
                         // 6. Sort reviews by proximity to 3-star ratings
-                        var sortedReviews = await _mongoHelper.GetReviewsByBusinessIdSortedByStarsAsync(restaurant.BusinessId, 3.0);
+                        var sortedReviews = await _mongoHelper.GetReviewsByBusinessIdSortedByStarsAsync(business.BusinessId, 3.0);
                     }
                 }
                 break;
@@ -100,15 +100,14 @@ public class InstructionExecutor
                     YelpingSince = DateTime.UtcNow.ToString("yyyy-MM-dd")
                 };
                 await _mongoHelper.InsertUserAsync(submitUser);
-                
-                // 2. Search for restaurants by name prefix
+                // 2. Search for businesses by name prefix
                 string submitNamePrefix = instruction.Parameters["name_prefix"];
-                var submitRestaurants = await _mongoHelper.SearchRestaurantsByNamePrefixAsync(submitNamePrefix, 10);
+                var submitBusinesses = await _mongoHelper.SearchBusinessesByNamePrefixAsync(submitNamePrefix, 10);
                 
-                if (submitRestaurants.Count > 0)
+                if (submitBusinesses.Count > 0)
                 {
                     // 3. Select the first matching business
-                    var targetBusiness = submitRestaurants[0];
+                    var targetBusiness = submitBusinesses[0];
                     
                     // 4. Fetch its reviews
                     var businessReviews = await _mongoHelper.GetReviewsByBusinessIdAsync(targetBusiness.BusinessId);
@@ -143,30 +142,30 @@ public class InstructionExecutor
     {
         switch (instruction.Type)
         {
-            case InstructionType.SearchForRestaurants:
-                // 1. Search for restaurants by name prefix
+            case InstructionType.SearchForBusinesses:
+                // 1. Search for businesses by name prefix
                 string namePrefix = instruction.Parameters["name_prefix"];
-                var matchedRestaurants = await _postgresHelper.SearchRestaurantsByNamePrefixAsync(namePrefix, 10);
+                var matchedBusinesses = await _postgresHelper.SearchBusinessesByNamePrefixAsync(namePrefix, 10);
                 
-                if (matchedRestaurants.Count > 0)
+                if (matchedBusinesses.Count > 0)
                 {
-                    // 2. For the first 3 matched restaurants (or fewer if less than 3 returned)
-                    for (int i = 0; i < Math.Min(3, matchedRestaurants.Count); i++)
+                    // 2. For the first 3 matched businesses (or fewer if less than 3 returned)
+                    for (int i = 0; i < Math.Min(3, matchedBusinesses.Count); i++)
                     {
-                        var restaurant = matchedRestaurants[i];
+                        var business = matchedBusinesses[i];
                         
-                        // 3. Fetch images for the restaurant
-                        var restaurantPhotos = await _postgresHelper.GetPhotosByBusinessIdAsync(restaurant.BusinessId);
+                        // 3. Fetch images for the business
+                        var businessPhotos = await _postgresHelper.GetPhotosByBusinessIdAsync(business.BusinessId);
                         
                         // 4. Fetch 10 most recent reviews
-                        var recentReviews = await _postgresHelper.GetMostRecentReviewsByBusinessIdAsync(restaurant.BusinessId, 10);
+                        var recentReviews = await _postgresHelper.GetMostRecentReviewsByBusinessIdAsync(business.BusinessId, 10);
                         
                         // 5. Get users who wrote those reviews
                         var userIds = recentReviews.Select(r => r.UserId).Distinct().ToList();
                         var reviewUsers = await _postgresHelper.GetUsersByReviewIdsAsync(userIds);
                         
                         // 6. Sort reviews by proximity to 3-star ratings
-                        var sortedReviews = await _postgresHelper.GetReviewsByBusinessIdSortedByStarsAsync(restaurant.BusinessId, 3.0);
+                        var sortedReviews = await _postgresHelper.GetReviewsByBusinessIdSortedByStarsAsync(business.BusinessId, 3.0);
                     }
                 }
                 break;
@@ -182,14 +181,14 @@ public class InstructionExecutor
                 };
                 await _postgresHelper.InsertUserAsync(submitUser);
                 
-                // 2. Search for restaurants by name prefix
+                // 2. Search for businesses by name prefix
                 string submitNamePrefix = instruction.Parameters["name_prefix"];
-                var submitRestaurants = await _postgresHelper.SearchRestaurantsByNamePrefixAsync(submitNamePrefix, 10);
+                var submitBusinesses = await _postgresHelper.SearchBusinessesByNamePrefixAsync(submitNamePrefix, 10);
                 
-                if (submitRestaurants.Count > 0)
+                if (submitBusinesses.Count > 0)
                 {
                     // 3. Select the first matching business
-                    var targetBusiness = submitRestaurants[0];
+                    var targetBusiness = submitBusinesses[0];
                     
                     // 4. Fetch its reviews
                     var businessReviews = await _postgresHelper.GetReviewsByBusinessIdAsync(targetBusiness.BusinessId);
