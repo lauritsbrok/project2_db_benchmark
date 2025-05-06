@@ -8,6 +8,7 @@ services:
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+    command: mongod --wiredTigerCacheSizeGB 32
   postgres:
     image: postgres:15
     container_name: postgres_yelp
@@ -16,5 +17,6 @@ services:
     ports:
       - "5433:5432"
     restart: always
+    command: postgres -c shared_buffers=32GB
 volumes:
   pgdata:
