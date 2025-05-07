@@ -64,11 +64,8 @@ namespace project2_db_benchmark.DatabaseHelper
                 new CreateIndexModel<Business>(
                     businessKeys.Ascending(b => b.City).Ascending(b => b.Categories)),
 
-                new CreateIndexModel<Business>(businessKeys.Ascending(b => b.Name),
-                    new CreateIndexOptions
-                    {
-                        Collation = new Collation("en", strength: CollationStrength.Secondary)
-                    }),
+                new CreateIndexModel<Business>(
+                    Builders<Business>.IndexKeys.Ascending(b => b.Name)),
 
                 new CreateIndexModel<Business>(businessKeys.Descending(b => b.Stars))
             };
@@ -263,7 +260,7 @@ namespace project2_db_benchmark.DatabaseHelper
             // Create a regex filter for the name prefix
             var regexPattern = $"^{namePrefix}";
             var filter = Builders<Business>.Filter.And(
-                Builders<Business>.Filter.Regex(b => b.Name, new MongoDB.Bson.BsonRegularExpression(regexPattern, "i"))
+                Builders<Business>.Filter.Regex(b => b.Name, new MongoDB.Bson.BsonRegularExpression(regexPattern))
             );
 
             return await _businesses.Find(filter).Limit(limit).ToListAsync();
