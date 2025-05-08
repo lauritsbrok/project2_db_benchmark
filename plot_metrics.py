@@ -4,6 +4,20 @@ import matplotlib.pyplot as plt
 import os
 import sys
 
+keys_to_col_name = {
+    "totalTime(s)": "TotalTime (s)",
+    "throughput(tuples/s)": "Throughput (tuples/s)",
+    "avgLatency(ms)": "Average Latency (ms)",
+    "99thPercentileLatency(ms)": "99th Percentile Latency (ms)",
+    "90thPercentileLatency(ms)": "90th Percentile Latency (ms)",
+}
+
+output_name_to_title = {
+    "write": "Concurrent write transactions",
+    "user_read": "Concurrent read transactions",
+    "user_story": "User story transactions",
+}
+
 
 def create_comparison_plot(df1, df2, x_col, y_col, output_name, name, label1, label2):
     plt.figure(figsize=(10, 6))
@@ -32,14 +46,14 @@ def create_comparison_plot(df1, df2, x_col, y_col, output_name, name, label1, la
         label=label2,
     )
 
-    plt.title(f"{y_col} vs {x_col}")
-    plt.xlabel(x_col)
-    plt.ylabel(y_col)
+    plt.title(output_name_to_title[output_name])
+    plt.xlabel("Number of concurrent requests")
+    plt.ylabel(keys_to_col_name[y_col])
     plt.grid(True)
     plt.legend()
 
     # Save the plot
-    output_path = os.path.join("plots", f"{output_name}_{name}.png")
+    output_path = os.path.join("plots_the_real_deal", f"{output_name}_{name}.png")
     plt.savefig(output_path)
     plt.close()
 
@@ -58,10 +72,7 @@ def main():
     input_file2 = sys.argv[2]
     label1 = sys.argv[3]
     label2 = sys.argv[4]
-    filename = sys.argv[5]
-
-    # Generate output name from the labels
-    output_name = f"{filename}"
+    output_name = sys.argv[5]
 
     # Read the CSV files from the results directory
     input_path1 = input_file1
