@@ -25,7 +25,8 @@ echo "numConcurrent,totalTime(s),throughput(tuples/s),minLatency(ms),maxLatency(
 echo -e "Database, Concurrency, Size" > "$results_dir/db_sizes.csv"
 
 # Array of concurrency levels
-concurrency_levels=(2 4 8 16 32 64)
+# concurrency_levels=(2 4 8 16 32 64)
+concurrency_levels=(8)
 
 # Function to run benchmarks for a specific database
 run_benchmark() {
