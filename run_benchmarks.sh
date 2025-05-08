@@ -45,7 +45,7 @@ run_benchmark() {
         sleep 10
 
         # Run the benchmark
-        dotnet run --database "$db" --num_concurrent "$level" --benchmark_type "$benchmark_type" --results_dir "$results_dir"
+        perf stat -o "perf_results_${database}_${level}_${benchmark_type}.txt" -d -a -e cycles,instructions,cache-references,cache-misses,branch-misses,context-switches,cpu-migrations,page-faults bin/Release/net9.0/linux-x64/publish/project2_db_benchmark --database "$db" --num_concurrent "$level" --benchmark_type "$benchmark_type" --results_dir "$results_dir"
 
         sleep 2
 
