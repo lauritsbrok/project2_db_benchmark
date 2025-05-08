@@ -25,7 +25,7 @@ echo "numConcurrent,totalTime(s),throughput(tuples/s),minLatency(ms),maxLatency(
 echo -e "Database, Concurrency, Size" > "$results_dir/db_sizes.csv"
 
 # Array of concurrency levels
-concurrency_levels=(1 2 4 8 16 32 64 100)
+concurrency_levels=(2 4 8 16 32 64)
 
 # Function to run benchmarks for a specific database
 run_benchmark() {
@@ -83,5 +83,11 @@ run_benchmark "mongo" "user-story"
 
 # Cleanup at the end
 docker-compose down
+
+# Remove the instruction file if it exists
+if [ -f "instruction-set.json" ]; then
+    rm "instruction-set.json"
+    echo "Deleted instruction-set.json"
+fi
 
 echo "Benchmarking completed!"
