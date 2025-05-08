@@ -45,9 +45,9 @@ def create_comparison_plot(df1, df2, x_col, y_col, output_name, name, label1, la
 
 
 def main():
-    if len(sys.argv) != 5:
+    if len(sys.argv) != 6:
         print(
-            "Usage: python plot_metrics.py <input_csv1> <input_csv2> <label1> <label2>"
+            "Usage: python plot_metrics.py <input_csv1> <input_csv2> <label1> <label2> <output_name>"
         )
         print(
             "Example: python plot_metrics.py mongo.csv postgres.csv MongoDB PostgreSQL"
@@ -58,13 +58,14 @@ def main():
     input_file2 = sys.argv[2]
     label1 = sys.argv[3]
     label2 = sys.argv[4]
+    filename = sys.argv[5]
 
     # Generate output name from the labels
-    output_name = f"{label1.lower()}_vs_{label2.lower()}"
+    output_name = f"{filename}"
 
     # Read the CSV files from the results directory
-    input_path1 = os.path.join("results", input_file1)
-    input_path2 = os.path.join("results", input_file2)
+    input_path1 = input_file1
+    input_path2 = input_file2
 
     if not os.path.exists(input_path1):
         print(f"Error: Input file {input_path1} not found!")
@@ -74,7 +75,7 @@ def main():
         sys.exit(1)
 
     # Create plots directory if it doesn't exist
-    os.makedirs("plots", exist_ok=True)
+    os.makedirs("plots_the_real_deal", exist_ok=True)
 
     # Read the CSV files
     df1 = pd.read_csv(input_path1)
